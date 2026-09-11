@@ -3,14 +3,25 @@ import { Twin, SimulateResponse, ChangeVerdict, OptimizationResult, BlastRadiusR
 const API_BASE = '/api';
 
 export const apiClient = {
-  async getTwin(): Promise<Twin> {
+  async getTwin(twinId?: string): Promise<Twin> {
     try {
-      const res = await fetch(`${API_BASE}/twin`);
+      const url = twinId ? `${API_BASE}/twin/${encodeURIComponent(twinId)}` : `${API_BASE}/twin`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       return await res.json();
     } catch (e) {
       console.warn('Falling back to local golden twin fixture:', e);
       return getFallbackTwin();
+    }
+  },
+
+  async listTwins(): Promise<Array<{ id: string; asset_count: number; edge_count: number; flow_count: number }>> {
+    try {
+      const res = await fetch(`${API_BASE}/twins`);
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      return await res.json();
+    } catch (e) {
+      return [];
     }
   },
 
@@ -22,10 +33,18 @@ export const apiClient = {
     control_ids?: string[];
   }): Promise<SimulateResponse> {
     try {
+      const payload = {
+        twin_id: params.twin_id || 'twin-finbank-golden',
+        agent_id: params.agent_id || 'adv-admin',
+        seed: params.seed ?? 42,
+        n: params.n_walks ?? 200,
+        n_walks: params.n_walks ?? 200,
+        control_ids: params.control_ids || [],
+      };
       const res = await fetch(`${API_BASE}/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       return await res.json();
@@ -43,10 +62,17 @@ export const apiClient = {
     n_walks?: number;
   }): Promise<ChangeVerdict> {
     try {
+      const payload = {
+        twin_id: params.twin_id || 'twin-finbank-golden',
+        control_ids: params.control_ids,
+        agent_ids: params.agent_id ? [params.agent_id] : [],
+        seed: params.seed ?? 42,
+        n: params.n_walks ?? 200,
+      };
       const res = await fetch(`${API_BASE}/evaluate-change`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       return await res.json();

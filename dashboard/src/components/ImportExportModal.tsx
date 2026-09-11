@@ -49,7 +49,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
       setSuccessSummary(res.data);
       // Fetch the updated twin structure to refresh the parent state
       try {
-        const updated = await apiClient.getTwin();
+        const updated = await apiClient.getTwin(res.data.twin_id);
         onTwinImported(updated);
       } catch (err) {
         console.error('Failed to reload twin after import:', err);
@@ -73,7 +73,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
     if (res.ok) {
       setSuccessSummary(res.data);
       try {
-        const updated = await apiClient.getTwin();
+        const updated = await apiClient.getTwin(res.data.twin_id);
         onTwinImported(updated);
       } catch (err) {
         console.error('Failed to reload twin after CSV import:', err);

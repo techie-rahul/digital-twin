@@ -116,7 +116,7 @@ def guided_search(
             Asset(id=n, name=n, kind="server", zone="corp", criticality=2, crown_jewel=(n == resolved_target))
             for n in graph.nodes
         ]
-        twin_model = Twin(id="temp", assets=dummy_assets, edges=[], controls=[])
+        twin_model = Twin(id="temp", assets=dummy_assets, edges=[], controls=[], identities=[], flows=[])
 
     # 4. Priority Queue state: (-priority_score, counter, node_path, edge_path, caps)
     counter = 0

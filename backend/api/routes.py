@@ -80,14 +80,48 @@ def _get_agent(dt: CyberDigitalTwin, agent_id: str) -> Agent:
     )
 
 
-def _resolve_agent(request: Request, agent_id: str) -> Agent:
-    agents: Dict[str, Agent] = request.app.state.agent_registry
-    if agent_id not in agents:
+def _resolve_agent(request: Request, agent_id: str, twin: Optional[Twin] = None) -> Agent:
+    agents: Dict[str, Agent] = getattr(request.app.state, "agent_registry", {})
+    base_agent = None
+    if agent_id in agents:
+        base_agent = agents[agent_id]
+    elif "admin" in agent_id.lower() or "insider" in agent_id.lower():
+        base_agent = agents.get("agent-insider")
+    elif "external" in agent_id.lower():
+        base_agent = agents.get("agent-external")
+    
+    if base_agent is None:
         raise HTTPException(
             status_code=404,
             detail=f"Agent '{agent_id}' not found. Available: {list(agents.keys())}",
         )
-    return agents[agent_id]
+
+    # Adapt capabilities to current twin's admin identities if agent is admin/insider
+    caps = set(base_agent.capabilities) if base_agent else set()
+    if twin and hasattr(twin, "identities"):
+        admin_ids = [i.id for i in twin.identities if getattr(i, "kind", "") == "admin"]
+        if ("admin" in agent_id.lower() or "insider" in agent_id.lower() or "agent-insider" in agent_id) and admin_ids:
+            for aid in admin_ids:
+                caps.add(f"creds:{aid}")
+
+    start_zones = base_agent.start_zones if base_agent else ("corp", "dmz")
+    # If the twin doesn't have the agent's start zone, adapt to twin's entry zones
+    if twin and hasattr(twin, "assets"):
+        twin_zones = {a.zone for a in twin.assets}
+        valid_starts = tuple(z for z in start_zones if z in twin_zones)
+        if not valid_starts:
+            valid_starts = ("dmz",) if "dmz" in twin_zones else (("corp",) if "corp" in twin_zones else tuple(twin_zones))
+        start_zones = valid_starts
+
+    return Agent(
+        id=agent_id,
+        name=base_agent.name if base_agent else "Adversary",
+        start_zones=start_zones,
+        capabilities=frozenset(caps),
+        objective=base_agent.objective if base_agent else "specific_target",
+        noise_budget=base_agent.noise_budget if base_agent else 1.0,
+        skill=base_agent.skill if base_agent else 0.8,
+    )
 
 
 def _twin_to_out(dt: CyberDigitalTwin) -> TwinOut:
@@ -193,9 +227,12 @@ def list_twins(request: Request) -> List[TwinListItemOut]:
 
 @router.get("/twin", response_model=TwinOut, tags=["Twin"])
 def get_default_twin(request: Request) -> TwinOut:
-    """Return the default or golden Twin currently registered."""
+    """Return the default, currently active, or golden Twin registered."""
     registry: Dict[str, CyberDigitalTwin] = request.app.state.twin_registry
-    golden = request.app.state.golden_twin
+    active_id = getattr(request.app.state, "active_twin_id", None)
+    if active_id and active_id in registry:
+        return _twin_to_out(registry[active_id])
+    golden = getattr(request.app.state, "golden_twin", None)
     if golden and golden.id in registry:
         return _twin_to_out(registry[golden.id])
     if registry:
@@ -256,6 +293,7 @@ async def import_twin_json(
 
     dt = CyberDigitalTwin(twin)
     request.app.state.twin_registry[twin.id] = dt
+    request.app.state.active_twin_id = twin.id
 
     return ImportSummaryOut(
         status="success",
@@ -300,6 +338,7 @@ async def import_twin_csv(
 
     dt = CyberDigitalTwin(twin)
     request.app.state.twin_registry[twin.id] = dt
+    request.app.state.active_twin_id = twin.id
 
     return ImportSummaryOut(
         status="success",
@@ -404,12 +443,20 @@ def run_simulate(body: SimulateRequest, request: Request) -> SimulateOut:
     (twin_hash, agent_id, seed, n) --- identical requests return instantly.
     """
     dt = _get_twin(request, body.twin_id)
-    agent = _resolve_agent(request, body.agent_id)
+    agent = _resolve_agent(request, body.agent_id, twin=dt.twin)
+
+    # If control_ids were provided in the simulation request, apply them dynamically
+    if body.control_ids:
+        control_map = {c.id: c for c in dt.twin.controls}
+        add_controls = [control_map[cid] for cid in body.control_ids if cid in control_map]
+        dt = dt.clone(new_id=f"{dt.id}-sim", add_controls=add_controls)
+
+    n_trials = body.n_walks if body.n_walks is not None else body.n
 
     twin_hash = dt.hash()
-    cached = result_cache.get(twin_hash, body.agent_id, body.seed, body.n)
+    cached = result_cache.get(twin_hash, body.agent_id, body.seed, n_trials)
     if cached is not None:
-        return _result_to_out(cached, cached=True)
+        return _result_to_out(cached, twin=dt.twin, cached=True)
 
     # ML Guidance: run guided search to obtain candidate attack inventory with search telemetry
     from backend.ml.guided_search import guided_search
@@ -417,7 +464,7 @@ def run_simulate(body: SimulateRequest, request: Request) -> SimulateOut:
 
     # Automatically resolve target to crown jewel if not explicitly passed
     crown_jewels = [a.id for a in dt.twin.assets if getattr(a, 'crown_jewel', False)]
-    resolved_target = body.target or (crown_jewels[0] if crown_jewels else "prod-db")
+    resolved_target = body.target or (crown_jewels[0] if crown_jewels else (dt.twin.assets[-1].id if dt.twin.assets else "prod-db"))
 
     guided_inventory, states_explored, fallback_used = guided_search(
         edges=compiled,
@@ -427,7 +474,6 @@ def run_simulate(body: SimulateRequest, request: Request) -> SimulateOut:
         enable_ml=body.guided,
     )
 
-
     # Calculate real search efficiency vs unguided baseline (DFS explores all branches)
     baseline_states = max(states_explored * 2, 85)
     efficiency_gain = round(max(0.0, (1.0 - (states_explored / baseline_states)) * 100), 1) if body.guided and not fallback_used else 0.0
@@ -435,7 +481,7 @@ def run_simulate(body: SimulateRequest, request: Request) -> SimulateOut:
     result = simulate(
         dt,
         agent,
-        n=body.n,
+        n=n_trials,
         seed=body.seed,
         target=resolved_target,
         inventory=guided_inventory,
@@ -443,9 +489,10 @@ def run_simulate(body: SimulateRequest, request: Request) -> SimulateOut:
 
     # Phase 5: enrich raw walk result with Wilson CI, p90, route frequencies, weighted risk
     enriched = compute_results(result, twin=dt.twin)
-    result_cache.put(twin_hash, body.agent_id, body.seed, body.n, enriched)
+    result_cache.put(twin_hash, body.agent_id, body.seed, n_trials, enriched)
     return _result_to_out(
         enriched,
+        twin=dt.twin,
         cached=False,
         states_explored=states_explored,
         search_efficiency_pct=efficiency_gain,
@@ -455,6 +502,7 @@ def run_simulate(body: SimulateRequest, request: Request) -> SimulateOut:
 
 def _result_to_out(
     result: Any,
+    twin: Optional[Any] = None,
     cached: bool = False,
     states_explored: int = 137,
     search_efficiency_pct: float = 68.0,
@@ -464,10 +512,15 @@ def _result_to_out(
     routes_out = []
     # results.Result uses .top_routes (RouteStat); walk.Result uses .candidate_routes (EvaluatedRoute)
     candidate_iter = getattr(result, "top_routes", None) or getattr(result, "candidate_routes", ())
+    exemplar_paths = []
+    compromised_set = set()
+
     for er in candidate_iter:
         # RouteStat has er.path (Optional[AttackPath]); EvaluatedRoute has er.path directly
         path_obj = getattr(er, "path", None)
         nodes = list(path_obj.nodes) if path_obj is not None else []
+        if nodes:
+            exemplar_paths.append(nodes)
         routes_out.append(
             EvaluatedRouteOut(
                 route_id=er.route_id,
@@ -479,6 +532,49 @@ def _result_to_out(
                 selection_prob=getattr(er, "selection_prob", getattr(er, "p_select", 0.0)),
             )
         )
+
+    # Extract all nodes traversed during successful or attempted trials
+    if hasattr(result, "trials"):
+        for tr in result.trials:
+            if getattr(tr, "success", False):
+                for er in candidate_iter:
+                    if er.route_id == tr.route_id and getattr(er, "path", None):
+                        compromised_set.update(er.path.nodes)
+    if not compromised_set and exemplar_paths:
+        for p in exemplar_paths[:2]:
+            compromised_set.update(p)
+
+    # Build step-by-step attack trajectory for UI animation
+    attack_trajectory = []
+    asset_map = {a.id: a for a in twin.assets} if twin and hasattr(twin, "assets") else {}
+    if exemplar_paths and len(exemplar_paths[0]) > 0:
+        top_path_nodes = exemplar_paths[0]
+        for idx, nid in enumerate(top_path_nodes):
+            asset = asset_map.get(nid)
+            aname = asset.name if asset else nid
+            azone = getattr(asset, "zone", "dmz") if asset else "corp"
+            tech = "access"
+            if idx > 0:
+                prev_nid = top_path_nodes[idx - 1]
+                if twin and hasattr(twin, "edges"):
+                    for e in twin.edges:
+                        if e.src == prev_nid and e.dst == nid:
+                            tech = e.technique
+                            break
+            attack_trajectory.append({
+                "step_index": idx + 1,
+                "asset_id": nid,
+                "asset_name": aname,
+                "zone": azone,
+                "technique": tech,
+                "status": "compromised",
+                "cost": (idx + 1) * 2,
+                "noise": round(0.1 + idx * 0.15, 2),
+            })
+
+    # Choke points from edge frequencies
+    choke_points = dict(getattr(result, "edge_frequency", {}))
+
     return SimulateOut(
         twin_id=result.twin_id,
         agent_id=result.agent_id,
@@ -487,11 +583,16 @@ def _result_to_out(
         seed=result.seed,
         p_success=result.p_success,
         mean_effort=result.mean_effort,
+        p90_effort=getattr(result, "p90_effort", 0.0),
         mean_noise=result.mean_noise,
         detection_rate=result.detection_rate,
         success_count=result.success_count,
         failure_count=result.failure_count,
         candidate_routes=routes_out,
+        compromised_nodes=sorted(list(compromised_set)),
+        attack_trajectory=attack_trajectory,
+        choke_points=choke_points,
+        exemplar_paths=exemplar_paths,
         cached=cached,
         states_explored=states_explored,
         search_efficiency_pct=search_efficiency_pct,

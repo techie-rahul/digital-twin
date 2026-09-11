@@ -7,6 +7,9 @@ interface HeaderProps {
   isBackendLive: boolean;
   onReset: () => void;
   onOpenImportExport?: () => void;
+  currentTwinId?: string;
+  onSelectTwin?: (twinId: string) => void;
+  availableTwins?: Array<{ id: string; asset_count: number }>;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,6 +18,9 @@ export const Header: React.FC<HeaderProps> = ({
   isBackendLive,
   onReset,
   onOpenImportExport,
+  currentTwinId,
+  onSelectTwin,
+  availableTwins = [],
 }) => {
   return (
     <header className="border-b border-canvas-border bg-white sticky top-0 z-50 px-6 py-3.5 transition-all">
@@ -97,6 +103,23 @@ export const Header: React.FC<HeaderProps> = ({
               {isBackendLive ? 'Engine Active (FastAPI)' : 'Engine Standby'}
             </span>
           </div>
+
+          {availableTwins && availableTwins.length > 0 && onSelectTwin && (
+            <div className="flex items-center">
+              <select
+                value={currentTwinId}
+                onChange={(e) => onSelectTwin(e.target.value)}
+                className="text-xs px-2.5 py-1 rounded-md bg-white hover:bg-ash-50 text-ash-800 border border-ash-200 shadow-subtle font-medium focus:outline-none focus:border-brand-orange cursor-pointer max-w-[200px] truncate"
+                title="Switch active Digital Twin scenario"
+              >
+                {availableTwins.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.id} ({t.asset_count} assets)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {onOpenImportExport && (
             <button

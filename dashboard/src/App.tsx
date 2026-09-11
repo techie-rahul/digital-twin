@@ -28,6 +28,7 @@ export const App: React.FC = () => {
   // Optimizer state
   const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
   const [isOptimizing, setIsOptimizing] = useState<boolean>(false);
+  const [availableTwins, setAvailableTwins] = useState<Array<{ id: string; asset_count: number }>>([]);
 
   // Blast Radius Modal state
   const [blastRadiusData, setBlastRadiusData] = useState<BlastRadiusResponse | null>(null);
@@ -38,6 +39,13 @@ export const App: React.FC = () => {
       try {
         const twinData = await apiClient.getTwin();
         setTwin(twinData);
+        if (twinData.controls.length > 0) {
+          setSelectedControlIds([twinData.controls[0].id]);
+        }
+
+        const twinsList = await apiClient.listTwins();
+        setAvailableTwins(twinsList);
+
         // Ping health check to determine if backend is live
         try {
           const healthRes = await fetch('/api/');
@@ -143,8 +151,26 @@ export const App: React.FC = () => {
 
   // 6. Reset Scenario to Baseline
   const handleResetScenario = () => {
-    setSelectedControlIds(['ctrl-network-seg']);
+    if (twin && twin.controls.length > 0) {
+      setSelectedControlIds([twin.controls[0].id]);
+    } else {
+      setSelectedControlIds([]);
+    }
     handleResetSimulation();
+    setOptimizationResult(null);
+  };
+
+  // Switch between loaded scenarios
+  const handleSelectTwin = async (twinId: string) => {
+    try {
+      const loadedTwin = await apiClient.getTwin(twinId);
+      setTwin(loadedTwin);
+      setSelectedControlIds(loadedTwin.controls.length > 0 ? [loadedTwin.controls[0].id] : []);
+      handleResetSimulation();
+      setOptimizationResult(null);
+    } catch (e) {
+      console.error('Failed to switch twin scenario:', e);
+    }
   };
 
   // 7. Solve Portfolio Optimization
@@ -205,6 +231,9 @@ export const App: React.FC = () => {
         isBackendLive={isBackendLive}
         onReset={handleResetScenario}
         onOpenImportExport={() => setIsImportExportOpen(true)}
+        currentTwinId={twin.id}
+        onSelectTwin={handleSelectTwin}
+        availableTwins={availableTwins}
       />
 
       {/* Main Content Area */}
@@ -254,9 +283,13 @@ export const App: React.FC = () => {
         isOpen={isImportExportOpen}
         onClose={() => setIsImportExportOpen(false)}
         currentTwin={twin}
-        onTwinImported={(newTwin) => {
+        onTwinImported={async (newTwin) => {
           setTwin(newTwin);
+          setSelectedControlIds(newTwin.controls.length > 0 ? [newTwin.controls[0].id] : []);
           handleResetSimulation();
+          setOptimizationResult(null);
+          const twinsList = await apiClient.listTwins();
+          setAvailableTwins(twinsList);
         }}
       />
 
