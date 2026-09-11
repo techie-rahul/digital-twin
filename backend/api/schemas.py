@@ -150,12 +150,24 @@ class SimulateOut(BaseModel):
 
 
 class BlastRadiusOut(BaseModel):
-    """GET /blast-radius/{asset_id} response."""
+    """GET /blast-radius/{asset_id} response (Phase 9 enriched)."""
     twin_id: str
     asset_id: str
     reachable: List[str]
     reachable_count: int
     crown_jewels_reachable: List[str]
+    # Phase 9 enhanced fields
+    reachable_assets: List[str] = Field(default_factory=list)
+    credential_aware_count: int = 0
+    network_upper_bound: List[str] = Field(default_factory=list)
+    network_upper_bound_count: int = 0
+    divergence: int = 0
+    critical_assets: List[str] = Field(default_factory=list)
+    crown_jewels: List[str] = Field(default_factory=list)
+    reachable_identities: List[str] = Field(default_factory=list)
+    usable_credentials: List[str] = Field(default_factory=list)
+    seeded_capabilities: List[str] = Field(default_factory=list)
+    explanation: str = ""
 
 
 class LineageNodeOut(BaseModel):

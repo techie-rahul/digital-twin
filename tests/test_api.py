@@ -257,10 +257,10 @@ def test_evaluate_change_mfa_wording(client):
 
 
 # ─────────────────────────────────────────────
-# 6. POST /optimize  (stub)
+# 6. POST /optimize  (real Phase 8)
 # ─────────────────────────────────────────────
 
-def test_optimize_stub_returns_schema(client):
+def test_optimize_returns_real_portfolio(client):
     r = client.post("/optimize", json={
         "twin_id": GOLDEN_ID,
         "budget": 5000,
@@ -269,10 +269,47 @@ def test_optimize_stub_returns_schema(client):
     })
     assert r.status_code == 200
     body = r.json()
+    assert "_stub" not in body
     assert "optimal_portfolio" in body
-    assert "naive_top_n" in body
+    assert "selected_control_ids" in body
+    assert "total_cost" in body
+    assert "budget" in body
+    assert body["budget"] == 5000
+    assert "risk_before" in body
+    assert "risk_after" in body
+    assert "risk_reduction" in body
+    assert "broken_flows" in body
     assert "alternatives" in body
-    assert body["_stub"] is True
+    assert "subsets_evaluated" in body
+    assert isinstance(body["subsets_evaluated"], int)
+    assert body["subsets_evaluated"] > 0
+    assert body["total_cost"] <= 5000
+    assert body["risk_reduction"] >= 0.0
+    assert isinstance(body["selected_control_ids"], list)
+
+    opt = body["optimal_portfolio"]
+    assert "control_ids" in opt
+    assert "total_cost" in opt
+    assert "risk_reduction" in opt
+    assert "is_safe" in opt
+    assert "verdict" in opt
+
+
+def test_optimize_does_not_mutate_twin(client):
+    r_before = client.get(f"/twin/{GOLDEN_ID}")
+    hash_before = r_before.json()["hash"]
+
+    r = client.post("/optimize", json={
+        "twin_id": GOLDEN_ID,
+        "budget": 3000,
+        "agent_ids": ["agent-external"],
+        "seed": 42,
+    })
+    assert r.status_code == 200
+
+    r_after = client.get(f"/twin/{GOLDEN_ID}")
+    hash_after = r_after.json()["hash"]
+    assert hash_before == hash_after
 
 
 # ─────────────────────────────────────────────
@@ -296,7 +333,7 @@ def test_matrix_unknown_twin(client):
 
 
 # ─────────────────────────────────────────────
-# 8. GET /blast-radius/{asset_id}
+# 8. GET /blast-radius/{asset_id} (real Phase 9)
 # ─────────────────────────────────────────────
 
 def test_blast_radius_payroll_api(client):
@@ -309,6 +346,26 @@ def test_blast_radius_payroll_api(client):
     assert isinstance(body["reachable_count"], int)
     assert "prod-db" in body["reachable"], "payroll-api must reach prod-db"
     assert "prod-db" in body["crown_jewels_reachable"]
+    assert "credential_aware_count" in body
+    assert "network_upper_bound" in body
+    assert "network_upper_bound_count" in body
+    assert "divergence" in body
+    assert "seeded_capabilities" in body
+    assert "usable_credentials" in body
+    assert "explanation" in body
+    assert "prod-db" in body["network_upper_bound"]
+
+
+def test_blast_radius_exposes_network_upper_bound_separation(client):
+    r = client.get("/blast-radius/ws-dev", params={"twin_id": GOLDEN_ID})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["asset_id"] == "ws-dev"
+    assert body["network_upper_bound_count"] >= body["credential_aware_count"]
+    assert body["divergence"] == body["network_upper_bound_count"] - body["credential_aware_count"]
+    assert isinstance(body["seeded_capabilities"], list)
+    assert "session:ws-dev" in body["seeded_capabilities"]
+    assert "admin:ws-dev" in body["seeded_capabilities"]
 
 
 def test_blast_radius_unknown_asset_returns_404(client):

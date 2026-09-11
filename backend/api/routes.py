@@ -25,8 +25,10 @@ from backend.core.models import Agent, Control
 from backend.core.twin import CyberDigitalTwin
 from backend.core.walk import simulate
 from backend.core.results import compute_results
+from backend.core.blast_radius import calculate_blast_radius
 from backend.rules.compile import compile_twin
 from backend.rules.evaluate import evaluate_change as _real_evaluate_change
+from backend.rules.optimize import optimize as real_optimize
 
 from backend.api import cache as result_cache
 from backend.api.schemas import (
@@ -35,7 +37,7 @@ from backend.api.schemas import (
     IdentityOut, LineageNodeOut, LineageOut, OptimizeRequest,
     ServiceFlowOut, SimulateOut, SimulateRequest, TwinOut,
 )
-from backend.api.stubs import stub_matrix, stub_optimize
+from backend.api.stubs import stub_matrix
 
 router = APIRouter()
 
@@ -299,18 +301,62 @@ def optimize(body: OptimizeRequest, request: Request) -> Dict[str, Any]:
     Return the optimal control portfolio under a budget constraint.
     Exhaustive search over ≤1024 subsets (≤10 controls).
 
-    CURRENT STATUS: Stubbed — wires to Phase 7 optimizer when delivered.
+    Uses Phase 8 backend.rules.optimize.optimize() — LIVE.
     """
-    _get_twin(request, body.twin_id)
+    dt = _get_twin(request, body.twin_id)
 
-    # TODO: Replace with:
-    #   from backend.core.optimizer import optimize as _optimize
-    #   return _optimize(dt.twin, body.budget, body.agent_ids, seed=body.seed)
-    return stub_optimize(
-        twin_id=body.twin_id,
+    portfolio = real_optimize(
+        twin=dt.twin,
         budget=body.budget,
-        agent_ids=body.agent_ids,
+        agents=body.agent_ids,
+        seed=body.seed,
     )
+
+    portfolio_dict = portfolio.model_dump()
+
+    optimal_portfolio = {
+        "control_ids": list(portfolio.selected_control_ids),
+        "total_cost": portfolio.total_cost,
+        "risk_before": portfolio.risk_before,
+        "risk_after": portfolio.risk_after,
+        "risk_reduction": portfolio.risk_reduction,
+        "broken_flows": portfolio_dict.get("broken_flows", []),
+        "is_safe": portfolio.is_safe,
+        "verdict": portfolio.verdict.verdict if portfolio.verdict else ("DEPLOY" if portfolio.is_safe else "BLOCK"),
+        "recommendation": portfolio.verdict.recommendation if portfolio.verdict else "",
+    }
+
+    naive_top_n = [
+        {
+            "rank": i + 1,
+            "control_ids": list(alt.control_ids),
+            "cost": alt.total_cost,
+            "risk_reduction": alt.risk_reduction,
+            "is_safe": alt.is_safe,
+        }
+        for i, alt in enumerate(portfolio.alternatives[:5])
+    ]
+
+    return {
+        "twin_id": body.twin_id,
+        "budget": body.budget,
+        "agent_ids": body.agent_ids,
+        "selected_control_ids": list(portfolio.selected_control_ids),
+        "selected_controls": portfolio_dict.get("selected_controls", []),
+        "total_cost": portfolio.total_cost,
+        "risk_before": portfolio.risk_before,
+        "risk_after": portfolio.risk_after,
+        "risk_reduction": portfolio.risk_reduction,
+        "broken_flows": portfolio_dict.get("broken_flows", []),
+        "is_safe": portfolio.is_safe,
+        "verdict": portfolio_dict.get("verdict"),
+        "alternatives": portfolio_dict.get("alternatives", []),
+        "all_evaluated_count": portfolio.all_evaluated_count,
+        "safe_evaluated_count": portfolio.safe_evaluated_count,
+        "subsets_evaluated": portfolio.subsets_evaluated,
+        "optimal_portfolio": optimal_portfolio,
+        "naive_top_n": naive_top_n,
+    }
 
 
 # ─────────────────────────────────────────────
@@ -337,33 +383,38 @@ def get_matrix(twin_id: str, request: Request) -> Dict[str, Any]:
 @router.get("/blast-radius/{asset_id}", response_model=BlastRadiusOut, tags=["Analysis"])
 def blast_radius(asset_id: str, request: Request, twin_id: str = "twin-finbank-golden") -> BlastRadiusOut:
     """
-    Compute blast radius: all nodes reachable from asset_id if it is compromised.
-    Uses nx.descendants on the existing graph — no re-implementation here.
+    Compute credential-aware blast radius and NetworkX descendant upper bound.
+    Uses Phase 9 backend.core.blast_radius.calculate_blast_radius().
 
     Query param ?twin_id= selects the twin (defaults to golden).
     """
     dt = _get_twin(request, twin_id)
-    reachable: set = dt.blast_radius(asset_id)
 
-    if asset_id not in dt.graph and not reachable:
-        # blast_radius returns empty set for unknown nodes — be helpful
+    try:
+        res = calculate_blast_radius(dt.twin, asset_id)
+    except ValueError as exc:
         raise HTTPException(
             status_code=404,
             detail=f"Asset '{asset_id}' not found in twin '{twin_id}'.",
         )
 
-    # Crown jewels among reachable nodes
-    crown_jewels = [
-        nid for nid in reachable
-        if dt.graph.nodes.get(nid, {}).get("crown_jewel", False)
-    ]
-
     return BlastRadiusOut(
         twin_id=twin_id,
-        asset_id=asset_id,
-        reachable=sorted(reachable),
-        reachable_count=len(reachable),
-        crown_jewels_reachable=crown_jewels,
+        asset_id=res.compromised_seed,
+        reachable=list(res.reachable_assets),
+        reachable_count=res.credential_aware_count,
+        crown_jewels_reachable=list(res.crown_jewels),
+        reachable_assets=list(res.reachable_assets),
+        credential_aware_count=res.credential_aware_count,
+        network_upper_bound=list(res.network_upper_bound),
+        network_upper_bound_count=res.network_upper_bound_count,
+        divergence=res.divergence,
+        critical_assets=list(res.critical_assets),
+        crown_jewels=list(res.crown_jewels),
+        reachable_identities=list(res.reachable_identities),
+        usable_credentials=list(res.usable_credentials),
+        seeded_capabilities=list(res.seeded_capabilities),
+        explanation=res.explanation,
     )
 
 
