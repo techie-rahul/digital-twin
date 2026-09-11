@@ -6,7 +6,7 @@ Endpoints (from CLAUDE.md §9 / INTERFACES.md):
     GET  /twin/{id}
     POST /twin/{id}/clone
     POST /simulate
-    POST /evaluate-change     ← centrepiece (stub until Person 2 delivers evaluate.py)
+    POST /evaluate-change     ← centrepiece — LIVE (Person 2 evaluate.py wired)
     POST /optimize            ← stub until Phase 7
     GET  /matrix/{twin_id}    ← stub until Phase 7
     GET  /blast-radius/{asset_id}
@@ -24,7 +24,9 @@ from fastapi import APIRouter, HTTPException, Request
 from backend.core.models import Agent, Control
 from backend.core.twin import CyberDigitalTwin
 from backend.core.walk import simulate
+from backend.core.results import compute_results
 from backend.rules.compile import compile_twin
+from backend.rules.evaluate import evaluate_change as _real_evaluate_change
 
 from backend.api import cache as result_cache
 from backend.api.schemas import (
@@ -33,7 +35,7 @@ from backend.api.schemas import (
     IdentityOut, LineageNodeOut, LineageOut, OptimizeRequest,
     ServiceFlowOut, SimulateOut, SimulateRequest, TwinOut,
 )
-from backend.api.stubs import stub_evaluate_change, stub_matrix, stub_optimize
+from backend.api.stubs import stub_matrix, stub_optimize
 
 router = APIRouter()
 
@@ -212,37 +214,44 @@ def run_simulate(body: SimulateRequest, request: Request) -> SimulateOut:
         seed=body.seed,
         target=body.target,
     )
-    result_cache.put(twin_hash, body.agent_id, body.seed, body.n, result)
-    return _result_to_out(result, cached=False)
+    # Phase 5: enrich raw walk result with Wilson CI, p90, route frequencies, weighted risk
+    enriched = compute_results(result, twin=dt.twin)
+    result_cache.put(twin_hash, body.agent_id, body.seed, body.n, enriched)
+    return _result_to_out(enriched, cached=False)
 
 
 def _result_to_out(result: Any, cached: bool = False) -> SimulateOut:
-    from backend.core.walk import Result as WalkResult
-    r: WalkResult = result
-    routes_out = [
-        EvaluatedRouteOut(
-            route_id=er.route_id,
-            nodes=list(er.path.nodes),
-            p_route=er.p_route,
-            effort_score=er.effort_score,
-            noise=er.noise,
-            utility=er.utility,
-            selection_prob=er.selection_prob,
+    """Serialise either a walk.Result or results.Result into SimulateOut."""
+    routes_out = []
+    # results.Result uses .top_routes (RouteStat); walk.Result uses .candidate_routes (EvaluatedRoute)
+    candidate_iter = getattr(result, "top_routes", None) or getattr(result, "candidate_routes", ())
+    for er in candidate_iter:
+        # RouteStat has er.path (Optional[AttackPath]); EvaluatedRoute has er.path directly
+        path_obj = getattr(er, "path", None)
+        nodes = list(path_obj.nodes) if path_obj is not None else []
+        routes_out.append(
+            EvaluatedRouteOut(
+                route_id=er.route_id,
+                nodes=nodes,
+                p_route=er.p_route,
+                effort_score=er.effort_score,
+                noise=er.noise,
+                utility=er.utility,
+                selection_prob=getattr(er, "selection_prob", getattr(er, "p_select", 0.0)),
+            )
         )
-        for er in r.candidate_routes
-    ]
     return SimulateOut(
-        twin_id=r.twin_id,
-        agent_id=r.agent_id,
-        target=r.target,
-        n=r.n,
-        seed=r.seed,
-        p_success=r.p_success,
-        mean_effort=r.mean_effort,
-        mean_noise=r.mean_noise,
-        detection_rate=r.detection_rate,
-        success_count=r.success_count,
-        failure_count=r.failure_count,
+        twin_id=result.twin_id,
+        agent_id=result.agent_id,
+        target=result.target,
+        n=result.n,
+        seed=result.seed,
+        p_success=result.p_success,
+        mean_effort=result.mean_effort,
+        mean_noise=result.mean_noise,
+        detection_rate=result.detection_rate,
+        success_count=result.success_count,
+        failure_count=result.failure_count,
         candidate_routes=routes_out,
         cached=cached,
     )
@@ -259,21 +268,25 @@ def evaluate_change(body: EvaluateChangeRequest, request: Request) -> Dict[str, 
     verdict (BLOCK/REVIEW/DEPLOY), broken business flows, confidence score,
     risk delta, effort delta, and alternatives.
 
-    CURRENT STATUS: Stubbed — wires to Person 2's evaluate.py when delivered.
-    The external contract will NOT change.
+    Uses Person 2's backend.rules.evaluate.evaluate_change() — LIVE.
     """
-    # Validate twin exists
-    _get_twin(request, body.twin_id)
+    dt = _get_twin(request, body.twin_id)
+    agent_registry: Dict[str, Agent] = request.app.state.agent_registry
 
-    # TODO: Replace with:
-    #   from backend.rules.evaluate import evaluate_change as _evaluate
-    #   return _evaluate(dt.twin, body.control_ids, body.agent_ids, seed=body.seed)
-    return stub_evaluate_change(
-        twin_id=body.twin_id,
+    # Resolve agent objects from string IDs (fall back to string if not in registry)
+    agent_ids = [
+        agent_registry.get(aid, aid) for aid in body.agent_ids
+    ] if body.agent_ids else []
+
+    verdict = _real_evaluate_change(
+        twin=dt.twin,
         control_ids=body.control_ids,
-        agent_ids=body.agent_ids,
+        agent_ids=agent_ids,
         seed=body.seed,
+        n=body.n,
     )
+
+    return verdict.model_dump()
 
 
 # ─────────────────────────────────────────────
