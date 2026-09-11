@@ -93,6 +93,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     else:
         logger.warning("Golden scenario not found at %s", GOLDEN_SCENARIO_PATH)
 
+    # Automatically load all other pre-built scenarios into registry
+    scenarios_dir = GOLDEN_SCENARIO_PATH.parent
+    if scenarios_dir.exists():
+        for p in scenarios_dir.glob("*.json"):
+            if p.name != "golden.json":
+                try:
+                    loaded = CyberDigitalTwin.from_file(p)
+                    twin_registry[loaded.id] = loaded
+                    logger.info("Loaded pre-built scenario: %s (%d assets)", loaded.id, loaded.asset_count)
+                except Exception as exc:
+                    logger.warning("Could not auto-load %s: %s", p.name, exc)
+
+
     agent_registry = _build_finbank_agents()
     logger.info("Registered agents: %s", list(agent_registry.keys()))
 

@@ -194,6 +194,17 @@ class HealthOut(BaseModel):
     cache_size: int
 
 
+class TwinListItemOut(BaseModel):
+    """Summary of a twin in GET /twins."""
+    id: str
+    parent_id: Optional[str] = None
+    hash: str
+    asset_count: int
+    edge_count: int
+    control_count: int
+    flow_count: int
+
+
 class ImportSummaryOut(BaseModel):
     """Response returned upon successful Twin import."""
     status: str = "success"
@@ -213,4 +224,5 @@ class ValidationErrorOut(BaseModel):
     status: str = "error"
     message: str
     errors: List[str] = Field(default_factory=list)
+
 

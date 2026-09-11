@@ -1,0 +1,152 @@
+{
+  "schema_version": "2.1",
+  "id": "twin-industrial-scada",
+  "parent_id": null,
+  "assets": [
+    {
+      "id": "corp-it-jumpbox",
+      "name": "Demilitarized Boundary Gateway",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "grid-turbine-plc",
+      "name": "Substation Safety Shutdown PLC",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 5,
+      "crown_jewel": true
+    },
+    {
+      "id": "historian-srv",
+      "name": "SCADA Process Historian",
+      "kind": "server",
+      "zone": "corp",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "operator-hmi-terminal",
+      "name": "Substation HMI Control Terminal",
+      "kind": "workstation",
+      "zone": "mgmt",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "substation-laptop",
+      "name": "Field Automation Workstation",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "telemetry-rtu-gw",
+      "name": "RTU DNP3 Telemetry Gateway",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 4,
+      "crown_jewel": false
+    }
+  ],
+  "identities": [
+    {
+      "id": "id-grid-chief",
+      "name": "Chief Substation Engineer",
+      "kind": "admin",
+      "tier": 0
+    },
+    {
+      "id": "id-shift-operator",
+      "name": "Shift Grid Operator",
+      "kind": "user",
+      "tier": 2
+    }
+  ],
+  "edges": [
+    {
+      "src": "corp-it-jumpbox",
+      "dst": "historian-srv",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "historian-srv",
+      "dst": "telemetry-rtu-gw",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "id-grid-chief",
+      "dst": "telemetry-rtu-gw",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-shift-operator",
+      "dst": "operator-hmi-terminal",
+      "technique": "db_login"
+    },
+    {
+      "src": "operator-hmi-terminal",
+      "dst": "telemetry-rtu-gw",
+      "technique": "rdp_lateral"
+    },
+    {
+      "src": "substation-laptop",
+      "dst": "operator-hmi-terminal",
+      "technique": "rdp_lateral"
+    },
+    {
+      "src": "telemetry-rtu-gw",
+      "dst": "grid-turbine-plc",
+      "technique": "db_login"
+    }
+  ],
+  "flows": [
+    {
+      "id": "F-SCADA-TELEMETRY",
+      "name": "Substation Grid Busbar Voltage Feed",
+      "src": "telemetry-rtu-gw",
+      "dst": "historian-srv",
+      "technique": "ssh_lateral",
+      "criticality": 5
+    },
+    {
+      "id": "F-TRIP-RELAY",
+      "name": "Breaker Trip & Reclose Protocol",
+      "src": "operator-hmi-terminal",
+      "dst": "grid-turbine-plc",
+      "technique": "db_login",
+      "criticality": 5
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-airgap-token",
+      "name": "FIDO2 Hardware Key Air-Gap Auth",
+      "cost": 1800,
+      "blocks": [
+        "db_login"
+      ],
+      "scope": [
+        "grid-turbine-plc"
+      ],
+      "efficacy": 0.9
+    },
+    {
+      "id": "ctrl-data-diode",
+      "name": "Hardware Unidirectional Data Diode",
+      "cost": 4500,
+      "blocks": [
+        "rdp_lateral",
+        "ssh_lateral"
+      ],
+      "scope": [
+        "corp-it-jumpbox",
+        "historian-srv"
+      ],
+      "efficacy": 0.99
+    }
+  ]
+}

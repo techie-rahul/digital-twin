@@ -37,8 +37,9 @@ from backend.api.schemas import (
     AssetOut, BlastRadiusOut, CloneOut, CloneRequest, ControlOut,
     EdgeOut, EvaluateChangeRequest, EvaluatedRouteOut, HealthOut,
     IdentityOut, ImportSummaryOut, LineageNodeOut, LineageOut, OptimizeRequest,
-    ServiceFlowOut, SimulateOut, SimulateRequest, TwinOut, ValidationErrorOut,
+    ServiceFlowOut, SimulateOut, SimulateRequest, TwinListItemOut, TwinOut, ValidationErrorOut,
 )
+
 from backend.api.stubs import stub_matrix
 from backend.api.twin_io import (
     MAX_UPLOAD_BYTES,
@@ -172,6 +173,24 @@ def ml_status() -> Dict[str, Any]:
 # GET /twin and GET /twin/{id}
 # ---------------------------------------------------------------------------------------------------------------------------------------
 
+@router.get("/twins", response_model=List[TwinListItemOut], tags=["Twin"])
+def list_twins(request: Request) -> List[TwinListItemOut]:
+    """Return a list of all currently registered twins with entity counts."""
+    registry: Dict[str, CyberDigitalTwin] = request.app.state.twin_registry
+    return [
+        TwinListItemOut(
+            id=dt.id,
+            parent_id=dt.parent_id,
+            hash=dt.hash(),
+            asset_count=dt.asset_count,
+            edge_count=dt.edge_count,
+            control_count=dt.control_count,
+            flow_count=dt.flow_count,
+        )
+        for dt in registry.values()
+    ]
+
+
 @router.get("/twin", response_model=TwinOut, tags=["Twin"])
 def get_default_twin(request: Request) -> TwinOut:
     """Return the default or golden Twin currently registered."""
@@ -183,6 +202,7 @@ def get_default_twin(request: Request) -> TwinOut:
         first_id = next(iter(registry.keys()))
         return _twin_to_out(registry[first_id])
     raise HTTPException(status_code=404, detail="No digital twin currently registered.")
+
 
 
 @router.get("/twin/{twin_id}", response_model=TwinOut, tags=["Twin"])
@@ -395,13 +415,18 @@ def run_simulate(body: SimulateRequest, request: Request) -> SimulateOut:
     from backend.ml.guided_search import guided_search
     compiled = compile_twin(dt.twin)
 
+    # Automatically resolve target to crown jewel if not explicitly passed
+    crown_jewels = [a.id for a in dt.twin.assets if getattr(a, 'crown_jewel', False)]
+    resolved_target = body.target or (crown_jewels[0] if crown_jewels else "prod-db")
+
     guided_inventory, states_explored, fallback_used = guided_search(
         edges=compiled,
         agent=agent,
-        target=body.target or "prod-db",
+        target=resolved_target,
         assets=dt.twin,
         enable_ml=body.guided,
     )
+
 
     # Calculate real search efficiency vs unguided baseline (DFS explores all branches)
     baseline_states = max(states_explored * 2, 85)
@@ -412,9 +437,10 @@ def run_simulate(body: SimulateRequest, request: Request) -> SimulateOut:
         agent,
         n=body.n,
         seed=body.seed,
-        target=body.target,
+        target=resolved_target,
         inventory=guided_inventory,
     )
+
     # Phase 5: enrich raw walk result with Wilson CI, p90, route frequencies, weighted risk
     enriched = compute_results(result, twin=dt.twin)
     result_cache.put(twin_hash, body.agent_id, body.seed, body.n, enriched)
