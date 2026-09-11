@@ -192,3 +192,25 @@ class HealthOut(BaseModel):
     golden_twin_id: Optional[str]
     golden_hash: Optional[str]
     cache_size: int
+
+
+class ImportSummaryOut(BaseModel):
+    """Response returned upon successful Twin import."""
+    status: str = "success"
+    message: str
+    twin_id: str
+    parent_id: Optional[str] = None
+    hash: str
+    asset_count: int
+    identity_count: int
+    edge_count: int
+    flow_count: int
+    control_count: int
+
+
+class ValidationErrorOut(BaseModel):
+    """Response returned upon failed Twin import validation."""
+    status: str = "error"
+    message: str
+    errors: List[str] = Field(default_factory=list)
+

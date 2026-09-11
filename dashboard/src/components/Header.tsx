@@ -6,6 +6,7 @@ interface HeaderProps {
   onTabChange: (tab: 'topology' | 'console' | 'optimizer') => void;
   isBackendLive: boolean;
   onReset: () => void;
+  onOpenImportExport?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -13,6 +14,7 @@ export const Header: React.FC<HeaderProps> = ({
   onTabChange,
   isBackendLive,
   onReset,
+  onOpenImportExport,
 }) => {
   return (
     <header className="border-b border-canvas-border bg-white sticky top-0 z-50 px-6 py-3.5 transition-all">
@@ -76,8 +78,8 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* Engine Status & Reset Trigger */}
-        <div className="flex items-center gap-3">
+        {/* Engine Status & Action Triggers */}
+        <div className="flex items-center gap-2.5">
           <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-ash-100 border border-ash-200 text-xs font-mono">
             <span className="relative flex h-2 w-2">
               <span
@@ -96,6 +98,17 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </div>
 
+          {onOpenImportExport && (
+            <button
+              onClick={onOpenImportExport}
+              title="Import or Export Digital Twin snapshot"
+              className="px-2.5 py-1 text-xs rounded-md bg-white hover:bg-ash-50 text-ash-700 hover:text-ash-900 border border-ash-200 shadow-subtle transition-all active:scale-[0.98] flex items-center gap-1.5 font-medium"
+            >
+              <SlidersHorizontal className="w-3 h-3 text-brand-orange" />
+              <span>Import / Export</span>
+            </button>
+          )}
+
           <button
             onClick={onReset}
             title="Reset model to baseline scenario"
@@ -109,3 +122,4 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+

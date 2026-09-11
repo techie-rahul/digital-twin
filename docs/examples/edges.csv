@@ -1,0 +1,17 @@
+src,dst,technique
+ci-runner,jump-01,ssh_lateral
+fileshare,ws-dev,smb_lateral
+id-svc-payroll,payroll-api,db_login
+id-user-admin,jump-01,db_login
+id-user-analyst,ws-dev,db_login
+id-user-customer,web-dmz,db_login
+internet,web-dmz,exploit_public_app
+jump-01,backup-01,rdp_lateral
+jump-01,prod-db,rdp_lateral
+payroll-api,prod-db,db_login
+web-dmz,jump-01,ssh_lateral
+web-dmz,payroll-api,db_login
+ws-dev,ci-runner,ssh_lateral
+ws-dev,fileshare,smb_lateral
+ws-dev,jump-01,rdp_lateral
+ws-hr,fileshare,smb_lateral

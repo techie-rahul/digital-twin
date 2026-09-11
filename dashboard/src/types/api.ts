@@ -145,3 +145,23 @@ export interface BlastRadiusResponse {
   total_downstream_criticality: number;
   direct_dependencies: string[];
 }
+
+export interface ImportSummary {
+  status: 'success';
+  message: string;
+  twin_id: string;
+  parent_id?: string | null;
+  hash: string;
+  asset_count: number;
+  identity_count: number;
+  edge_count: number;
+  flow_count: number;
+  control_count: number;
+}
+
+export interface ValidationErrorResponse {
+  status: 'error';
+  message: string;
+  errors: string[];
+}
+

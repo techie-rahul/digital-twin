@@ -1,25 +1,27 @@
 """
 FastAPI route handlers for all 8 Digital Twin API endpoints.
 
-Endpoints (from CLAUDE.md §9 / INTERFACES.md):
+Endpoints (from CLAUDE.md --9 / INTERFACES.md):
 
     GET  /twin/{id}
     POST /twin/{id}/clone
     POST /simulate
-    POST /evaluate-change     ← centrepiece — LIVE (Person 2 evaluate.py wired)
-    POST /optimize            ← stub until Phase 7
-    GET  /matrix/{twin_id}    ← stub until Phase 7
+    POST /evaluate-change     --- centrepiece --- LIVE (Person 2 evaluate.py wired)
+    POST /optimize            --- stub until Phase 7
+    GET  /matrix/{twin_id}    --- stub until Phase 7
     GET  /blast-radius/{asset_id}
     GET  /lineage/{twin_id}
 
 Business logic stays in backend/core/ and backend/rules/.
 This file is glue only.
 """
-from __future__ import annotations
 
+import json
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+
+from fastapi import APIRouter, File, HTTPException, Query, Request, Response, UploadFile
+from fastapi.responses import JSONResponse
 
 from backend.core.models import Agent, Control
 from backend.core.twin import CyberDigitalTwin
@@ -34,17 +36,26 @@ from backend.api import cache as result_cache
 from backend.api.schemas import (
     AssetOut, BlastRadiusOut, CloneOut, CloneRequest, ControlOut,
     EdgeOut, EvaluateChangeRequest, EvaluatedRouteOut, HealthOut,
-    IdentityOut, LineageNodeOut, LineageOut, OptimizeRequest,
-    ServiceFlowOut, SimulateOut, SimulateRequest, TwinOut,
+    IdentityOut, ImportSummaryOut, LineageNodeOut, LineageOut, OptimizeRequest,
+    ServiceFlowOut, SimulateOut, SimulateRequest, TwinOut, ValidationErrorOut,
 )
 from backend.api.stubs import stub_matrix
+from backend.api.twin_io import (
+    MAX_UPLOAD_BYTES,
+    TwinValidationError,
+    export_twin_csv_zip,
+    export_twin_json,
+    parse_and_validate_json,
+    parse_csv_zip_to_twin,
+)
 
 router = APIRouter()
 
 
-# ─────────────────────────────────────────────
+
+# ---------------------------------------------------------------------------------------------------------------------------------------
 # Helpers
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
 
 def _get_twin(request: Request, twin_id: str) -> CyberDigitalTwin:
     """Resolve a twin_id from the app-state registry. Raises 404 if missing."""
@@ -61,7 +72,7 @@ def _get_agent(dt: CyberDigitalTwin, agent_id: str) -> Agent:
     """Find an Agent by id inside a Twin. Raises 404 if missing."""
     for a in dt.twin.assets:
         pass  # assets are not agents; agents are on dt.twin directly via identities
-    # Agents are stored separately in app.state — look there
+    # Agents are stored separately in app.state --- look there
     raise HTTPException(
         status_code=404,
         detail=f"Agent '{agent_id}' not found.",
@@ -120,13 +131,13 @@ def _twin_to_out(dt: CyberDigitalTwin) -> TwinOut:
     )
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
 # GET /
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
 
 @router.get("/", response_model=HealthOut, tags=["Health"])
 def health(request: Request) -> HealthOut:
-    """Health check — confirms the server is alive and reports the loaded golden twin."""
+    """Health check --- confirms the server is alive and reports the loaded golden twin."""
     registry: Dict[str, CyberDigitalTwin] = request.app.state.twin_registry
     golden = request.app.state.golden_twin
     return HealthOut(
@@ -157,9 +168,22 @@ def ml_status() -> Dict[str, Any]:
     }
 
 
-# ─────────────────────────────────────────────
-# GET /twin/{id}
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
+# GET /twin and GET /twin/{id}
+# ---------------------------------------------------------------------------------------------------------------------------------------
+
+@router.get("/twin", response_model=TwinOut, tags=["Twin"])
+def get_default_twin(request: Request) -> TwinOut:
+    """Return the default or golden Twin currently registered."""
+    registry: Dict[str, CyberDigitalTwin] = request.app.state.twin_registry
+    golden = request.app.state.golden_twin
+    if golden and golden.id in registry:
+        return _twin_to_out(registry[golden.id])
+    if registry:
+        first_id = next(iter(registry.keys()))
+        return _twin_to_out(registry[first_id])
+    raise HTTPException(status_code=404, detail="No digital twin currently registered.")
+
 
 @router.get("/twin/{twin_id}", response_model=TwinOut, tags=["Twin"])
 def get_twin(twin_id: str, request: Request) -> TwinOut:
@@ -168,9 +192,147 @@ def get_twin(twin_id: str, request: Request) -> TwinOut:
     return _twin_to_out(dt)
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
+# Import / Export Endpoints (JSON & CSV)
+# ---------------------------------------------------------------------------------------------------------------------------------------
+
+@router.post(
+    "/twin/import/json",
+    response_model=ImportSummaryOut,
+    responses={400: {"model": ValidationErrorOut}, 422: {"model": ValidationErrorOut}},
+    tags=["Twin"],
+)
+async def import_twin_json(
+    request: Request,
+    file: Optional[UploadFile] = File(None),
+) -> ImportSummaryOut:
+    """
+    Import and validate a Digital Twin from a JSON payload or uploaded file.
+    Validates structural semantics, duplicate IDs, and referential integrity.
+    Registers the validated Twin in the active twin registry.
+    """
+    raw_content = ""
+    if file is not None:
+        file_bytes = await file.read()
+        if len(file_bytes) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=400, detail="File size exceeds 10 MB limit.")
+        try:
+            raw_content = file_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            raise HTTPException(status_code=400, detail="File must be valid UTF-8 encoded text.")
+    else:
+        body_bytes = await request.body()
+        if not body_bytes:
+            raise HTTPException(status_code=400, detail="Missing JSON file or request body.")
+        raw_content = body_bytes.decode("utf-8")
+
+    try:
+        twin = parse_and_validate_json(raw_content)
+    except TwinValidationError as exc:
+        return JSONResponse(
+            status_code=400,
+            content=exc.to_dict(),
+        )
+
+    dt = CyberDigitalTwin(twin)
+    request.app.state.twin_registry[twin.id] = dt
+
+    return ImportSummaryOut(
+        status="success",
+        message=f"Digital Twin '{twin.id}' imported and validated successfully.",
+        twin_id=twin.id,
+        parent_id=twin.parent_id,
+        hash=dt.hash(),
+        asset_count=dt.asset_count,
+        identity_count=dt.identity_count,
+        edge_count=dt.edge_count,
+        flow_count=dt.flow_count,
+        control_count=dt.control_count,
+    )
+
+
+@router.post(
+    "/twin/import/csv",
+    response_model=ImportSummaryOut,
+    responses={400: {"model": ValidationErrorOut}},
+    tags=["Twin"],
+)
+async def import_twin_csv(
+    request: Request,
+    file: UploadFile = File(...),
+    twin_id: Optional[str] = Query(default=None, description="Optional custom ID for the imported twin"),
+) -> ImportSummaryOut:
+    """
+    Import and validate a Digital Twin from a ZIP archive containing canonical CSV files:
+    assets.csv, identities.csv, edges.csv, flows.csv, controls.csv.
+    """
+    zip_bytes = await file.read()
+    if len(zip_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=400, detail="File size exceeds 10 MB limit.")
+
+    try:
+        twin = parse_csv_zip_to_twin(zip_bytes, twin_id=twin_id)
+    except TwinValidationError as exc:
+        return JSONResponse(
+            status_code=400,
+            content=exc.to_dict(),
+        )
+
+    dt = CyberDigitalTwin(twin)
+    request.app.state.twin_registry[twin.id] = dt
+
+    return ImportSummaryOut(
+        status="success",
+        message=f"Digital Twin '{twin.id}' imported and validated from CSV successfully.",
+        twin_id=twin.id,
+        parent_id=twin.parent_id,
+        hash=dt.hash(),
+        asset_count=dt.asset_count,
+        identity_count=dt.identity_count,
+        edge_count=dt.edge_count,
+        flow_count=dt.flow_count,
+        control_count=dt.control_count,
+    )
+
+
+@router.get("/twin/{twin_id}/export/json", tags=["Twin"])
+def export_twin_as_json(twin_id: str, request: Request):
+    """
+    Export the specified Digital Twin as a canonical, deterministic JSON file attachment.
+    """
+    dt = _get_twin(request, twin_id)
+    payload = export_twin_json(dt.twin)
+    json_bytes = json.dumps(payload, indent=2, sort_keys=False).encode("utf-8")
+
+    filename = f"{twin_id}.json"
+    return Response(
+        content=json_bytes,
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/twin/{twin_id}/export/csv", tags=["Twin"])
+def export_twin_as_csv(twin_id: str, request: Request):
+    """
+    Export the specified Digital Twin as a ZIP archive containing all 5 canonical CSV tables:
+    assets.csv, identities.csv, edges.csv, flows.csv, controls.csv.
+    """
+    dt = _get_twin(request, twin_id)
+    zip_bytes = export_twin_csv_zip(dt.twin)
+
+    filename = f"{twin_id}_csv.zip"
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------
 # POST /twin/{id}/clone
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
 
 @router.post("/twin/{twin_id}/clone", response_model=CloneOut, tags=["Twin"])
 def clone_twin(twin_id: str, body: CloneRequest, request: Request) -> CloneOut:
@@ -209,9 +371,9 @@ def clone_twin(twin_id: str, body: CloneRequest, request: Request) -> CloneOut:
     )
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
 # POST /simulate
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
 
 @router.post("/simulate", response_model=SimulateOut, tags=["Simulation"])
 def run_simulate(body: SimulateRequest, request: Request) -> SimulateOut:
@@ -219,7 +381,7 @@ def run_simulate(body: SimulateRequest, request: Request) -> SimulateOut:
     Run the plan-then-execute adversary simulation against a Twin.
 
     Search runs ONCE; walk loop runs n trials. Results are cached by
-    (twin_hash, agent_id, seed, n) — identical requests return instantly.
+    (twin_hash, agent_id, seed, n) --- identical requests return instantly.
     """
     dt = _get_twin(request, body.twin_id)
     agent = _resolve_agent(request, body.agent_id)
@@ -311,9 +473,9 @@ def _result_to_out(
     )
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
 # POST /evaluate-change
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
 
 @router.post("/evaluate-change", tags=["Decision"])
 def evaluate_change(body: EvaluateChangeRequest, request: Request) -> Dict[str, Any]:
@@ -322,7 +484,7 @@ def evaluate_change(body: EvaluateChangeRequest, request: Request) -> Dict[str, 
     verdict (BLOCK/REVIEW/DEPLOY), broken business flows, confidence score,
     risk delta, effort delta, and alternatives.
 
-    Uses Person 2's backend.rules.evaluate.evaluate_change() — LIVE.
+    Uses Person 2's backend.rules.evaluate.evaluate_change() --- LIVE.
     """
     dt = _get_twin(request, body.twin_id)
     agent_registry: Dict[str, Agent] = request.app.state.agent_registry
@@ -343,17 +505,17 @@ def evaluate_change(body: EvaluateChangeRequest, request: Request) -> Dict[str, 
     return verdict.model_dump()
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
 # POST /optimize
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
 
 @router.post("/optimize", tags=["Decision"])
 def optimize(body: OptimizeRequest, request: Request) -> Dict[str, Any]:
     """
     Return the optimal control portfolio under a budget constraint.
-    Exhaustive search over ≤1024 subsets (≤10 controls).
+    Exhaustive search over ---1024 subsets (---10 controls).
 
-    Uses Phase 8 backend.rules.optimize.optimize() — LIVE.
+    Uses Phase 8 backend.rules.optimize.optimize() --- LIVE.
     """
     dt = _get_twin(request, body.twin_id)
 
@@ -411,16 +573,16 @@ def optimize(body: OptimizeRequest, request: Request) -> Dict[str, Any]:
     }
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
 # GET /matrix/{twin_id}
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
 
 @router.get("/matrix/{twin_id}", tags=["Decision"])
 def get_matrix(twin_id: str, request: Request) -> Dict[str, Any]:
     """
-    Return a controls × agents risk-reduction matrix.
+    Return a controls -- agents risk-reduction matrix.
 
-    CURRENT STATUS: Stubbed — wires to real computation in Phase 7.
+    CURRENT STATUS: Stubbed --- wires to real computation in Phase 7.
     """
     _get_twin(request, twin_id)
 
@@ -428,9 +590,9 @@ def get_matrix(twin_id: str, request: Request) -> Dict[str, Any]:
     return stub_matrix(twin_id=twin_id)
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
 # GET /blast-radius/{asset_id}
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
 
 @router.get("/blast-radius/{asset_id}", response_model=BlastRadiusOut, tags=["Analysis"])
 def blast_radius(asset_id: str, request: Request, twin_id: str = "twin-finbank-golden") -> BlastRadiusOut:
@@ -470,9 +632,9 @@ def blast_radius(asset_id: str, request: Request, twin_id: str = "twin-finbank-g
     )
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
 # GET /lineage/{twin_id}
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------------------------------------------------------------------
 
 @router.get("/lineage/{twin_id}", response_model=LineageOut, tags=["Twin"])
 def lineage(twin_id: str, request: Request) -> LineageOut:

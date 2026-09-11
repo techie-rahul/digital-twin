@@ -4,6 +4,7 @@ import { TopologyCanvas } from './components/TopologyCanvas';
 import { ChangeConsole } from './components/ChangeConsole';
 import { OptimizerPanel } from './components/OptimizerPanel';
 import { BlastRadiusModal } from './components/BlastRadiusModal';
+import { ImportExportModal } from './components/ImportExportModal';
 import { apiClient } from './api/client';
 import { Twin, ChangeVerdict, OptimizationResult, BlastRadiusResponse, SimulationStep } from './types/api';
 
@@ -11,6 +12,8 @@ export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'topology' | 'console' | 'optimizer'>('topology');
   const [twin, setTwin] = useState<Twin | null>(null);
   const [isBackendLive, setIsBackendLive] = useState<boolean>(false);
+  const [isImportExportOpen, setIsImportExportOpen] = useState<boolean>(false);
+
 
   // Selected defensive controls for CAB change sandbox
   const [selectedControlIds, setSelectedControlIds] = useState<string[]>(['ctrl-network-seg']);
@@ -37,11 +40,12 @@ export const App: React.FC = () => {
         setTwin(twinData);
         // Ping health check to determine if backend is live
         try {
-          const healthRes = await fetch('/health');
+          const healthRes = await fetch('/api/');
           if (healthRes.ok) setIsBackendLive(true);
         } catch {
           setIsBackendLive(false);
         }
+
       } catch (e) {
         console.error('Failed to initialize digital twin:', e);
       }
@@ -200,6 +204,7 @@ export const App: React.FC = () => {
         onTabChange={setActiveTab}
         isBackendLive={isBackendLive}
         onReset={handleResetScenario}
+        onOpenImportExport={() => setIsImportExportOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -243,6 +248,18 @@ export const App: React.FC = () => {
         data={blastRadiusData}
         onClose={() => setBlastRadiusData(null)}
       />
+
+      {/* Import / Export Modal */}
+      <ImportExportModal
+        isOpen={isImportExportOpen}
+        onClose={() => setIsImportExportOpen(false)}
+        currentTwin={twin}
+        onTwinImported={(newTwin) => {
+          setTwin(newTwin);
+          handleResetSimulation();
+        }}
+      />
+
 
       {/* Minimalist Footer / Metadata Strip */}
       <footer className="border-t border-canvas-border bg-white px-6 py-3 text-xs font-mono text-ash-400 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-subtle">

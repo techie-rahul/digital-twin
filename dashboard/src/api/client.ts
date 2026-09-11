@@ -87,7 +87,53 @@ export const apiClient = {
       return getFallbackBlastRadius(assetId);
     }
   },
+
+  async importTwinJson(file: File): Promise<{ ok: boolean; data?: any; error?: string; errors?: string[] }> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${API_BASE}/twin/import/json`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { ok: false, error: data.message || 'JSON Import failed', errors: data.errors || [] };
+      }
+      return { ok: true, data };
+    } catch (e: any) {
+      return { ok: false, error: e.message || 'Failed to communicate with import API' };
+    }
+  },
+
+  async importTwinCsv(file: File, twinId?: string): Promise<{ ok: boolean; data?: any; error?: string; errors?: string[] }> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const url = twinId ? `${API_BASE}/twin/import/csv?twin_id=${encodeURIComponent(twinId)}` : `${API_BASE}/twin/import/csv`;
+      const res = await fetch(url, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { ok: false, error: data.message || 'CSV Import failed', errors: data.errors || [] };
+      }
+      return { ok: true, data };
+    } catch (e: any) {
+      return { ok: false, error: e.message || 'Failed to communicate with import API' };
+    }
+  },
+
+  getExportJsonUrl(twinId: string): string {
+    return `${API_BASE}/twin/${twinId}/export/json`;
+  },
+
+  getExportCsvUrl(twinId: string): string {
+    return `${API_BASE}/twin/${twinId}/export/csv`;
+  },
 };
+
 
 // -----------------------------------------------------------------------------
 // Fallback Mocks

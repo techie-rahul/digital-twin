@@ -1,0 +1,7 @@
+id,name,src,dst,technique,criticality
+F1,Customer Web Banking Traffic,internet,web-dmz,exploit_public_app,3
+F2,Web Portal API Integration,web-dmz,payroll-api,db_login,4
+F3,Payroll Transaction Ledger Commits,payroll-api,prod-db,db_login,5
+F4,Developer CI/CD Build Pipelines,ws-dev,ci-runner,ssh_lateral,3
+F5,Corporate File Sync & Archival,ws-hr,fileshare,smb_lateral,3
+F6,Disaster Recovery Backup Synchronization,jump-01,backup-01,rdp_lateral,4
