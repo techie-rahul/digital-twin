@@ -24,6 +24,7 @@ class SimulateRequest(BaseModel):
     n: int = Field(100, ge=1, le=2000, description="Number of Monte Carlo trials.")
     seed: int = Field(42, description="Deterministic RNG seed.")
     target: Optional[str] = Field(None, description="Target asset ID. Defaults to crown jewel.")
+    guided: bool = Field(True, description="Enable adaptive ML heuristic guidance.")
 
 
 class CloneRequest(BaseModel):
@@ -147,6 +148,9 @@ class SimulateOut(BaseModel):
     failure_count: int
     candidate_routes: List[EvaluatedRouteOut]
     cached: bool = False
+    states_explored: int = 0
+    search_efficiency_pct: float = 0.0
+    guidance_mode: str = "adaptive_ml"
 
 
 class BlastRadiusOut(BaseModel):
