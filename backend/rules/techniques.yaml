@@ -1,0 +1,125 @@
+# MITRE ATT&CK Enterprise Technique Catalog (Baseline v2.1)
+# Bounded catalog supporting threat vector assessments in digital twin environments.
+
+- id: "T1046"
+  name: "Network Service Scanning"
+  description: "Adversaries may attempt to get a listing of services running on remote hosts to identify vulnerable services or access paths."
+  prerequisites:
+    - "network_access"
+  grants:
+    - "discovered_services"
+  blocks:
+    - "network_segmentation"
+
+- id: "T1087"
+  name: "Account Discovery"
+  description: "Adversaries may attempt to get a listing of valid domain or local accounts to identify targets for privilege escalation."
+  prerequisites:
+    - "discovered_services"
+  grants:
+    - "enumerated_accounts"
+  blocks:
+    - "access_control_lists"
+
+- id: "T1078"
+  name: "Valid Accounts"
+  description: "Adversaries may obtain and abuse credentials of existing accounts as a means of gaining access or moving laterally."
+  prerequisites:
+    - "stolen_credentials"
+  grants:
+    - "authenticated_session"
+  blocks:
+    - "mfa"
+
+- id: "T1021.001"
+  name: "Remote Services: Remote Desktop Protocol"
+  description: "Adversaries may use Valid Accounts to log into remote services using RDP to expand access inside the network."
+  prerequisites:
+    - "admin_credentials"
+    - "network_access"
+  grants:
+    - "interactive_desktop_session"
+  blocks:
+    - "network_segmentation"
+    - "mfa"
+
+- id: "T1021.002"
+  name: "Remote Services: SMB/Windows Admin Shares"
+  description: "Adversaries may use SMB to transfer files or execute commands on remote systems across the environment."
+  prerequisites:
+    - "admin_credentials"
+    - "network_access"
+  grants:
+    - "remote_file_access"
+  blocks:
+    - "network_segmentation"
+    - "firewall"
+
+- id: "T1021.004"
+  name: "Remote Services: SSH"
+  description: "Adversaries may log into remote systems using SSH with compromised credentials or private keys."
+  prerequisites:
+    - "ssh_key_or_password"
+    - "network_access"
+  grants:
+    - "remote_shell_session"
+  blocks:
+    - "network_segmentation"
+    - "mfa"
+
+- id: "T1059.001"
+  name: "Command and Scripting Interpreter: PowerShell"
+  description: "Adversaries may use PowerShell commands and scripts to execute malicious payloads or automate operations."
+  prerequisites:
+    - "host_execution"
+  grants:
+    - "script_execution"
+  blocks:
+    - "edr"
+    - "script_block_logging"
+
+- id: "T1003"
+  name: "OS Credential Dumping"
+  description: "Adversaries may attempt to dump credentials from the operating system memory, files, or SAM database."
+  prerequisites:
+    - "local_admin_privileges"
+  grants:
+    - "plaintext_credentials"
+    - "password_hashes"
+  blocks:
+    - "edr"
+    - "credential_guard"
+
+- id: "T1550.002"
+  name: "Use Alternate Authentication Material: Pass the Hash"
+  description: "Adversaries may use password hashes to authenticate to systems without needing the plaintext password."
+  prerequisites:
+    - "password_hashes"
+    - "network_access"
+  grants:
+    - "authenticated_session"
+  blocks:
+    - "credential_guard"
+    - "network_segmentation"
+
+- id: "T1560"
+  name: "Archive Collected Data"
+  description: "Adversaries may compress or encrypt collected data prior to exfiltration."
+  prerequisites:
+    - "file_read_access"
+  grants:
+    - "archived_data_payload"
+  blocks:
+    - "dlp"
+
+- id: "T1041"
+  name: "Exfiltration Over C2 Channel"
+  description: "Adversaries may exfiltrate data by communicating over existing command and control channels."
+  prerequisites:
+    - "archived_data_payload"
+    - "c2_channel"
+  grants:
+    - "data_exfiltrated"
+  blocks:
+    - "dlp"
+    - "egress_filtering"
