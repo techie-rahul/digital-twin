@@ -7,6 +7,19 @@ export default {
   theme: {
     extend: {
       colors: {
+        cyber: {
+          dark: '#0a0e17',
+          card: '#111827',
+          surface: '#1e293b',
+          border: '#1e3a5f',
+          primary: '#e2e8f0',
+          muted: '#94a3b8',
+        },
+        accent: {
+          'cyber-green': '#10b981',
+          'cyber-red': '#ef4444',
+          'cyber-amber': '#f59e0b',
+        },
         canvas: {
           DEFAULT: '#FAFAFA',
           subtle: '#F4F4F5',

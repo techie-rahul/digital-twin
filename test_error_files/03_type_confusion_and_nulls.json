@@ -1,0 +1,34 @@
+{
+  "id": 9999999999999999999999999999999999999999999999999999,
+  "name": null,
+  "is_active": "maybe_true_or_false",
+  "count": "one_hundred",
+  "nested_list": {
+    "should_be_array": "surprise! I am a string",
+    "another_field": null
+  },
+  "assets": false,
+  "edges": null,
+  "nodes": 42.424242,
+  "controls": [
+    "not_an_object",
+    123,
+    false,
+    null,
+    {
+      "weird": [
+        null,
+        null
+      ]
+    }
+  ],
+  "criticality": -99999,
+  "probability": 150000.75,
+  "empty_object": {},
+  "null_values_list": [
+    null,
+    null,
+    null,
+    null
+  ]
+}

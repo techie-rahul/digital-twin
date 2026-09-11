@@ -1,0 +1,232 @@
+[
+  {
+    "id": "edge_0_node-internet_app-ecommerce-api",
+    "organization_id": "org-acme-01",
+    "source_id": "node-internet",
+    "target_id": "app-ecommerce-api",
+    "type": "CONNECTS_TO",
+    "confidence": 1.0,
+    "properties_json": "{\"protocol\": \"TCP\"}",
+    "created_at": "2026-09-11 10:57:58.781982"
+  },
+  {
+    "id": "edge_1_node-internet_rds-postgres-prod",
+    "organization_id": "org-acme-01",
+    "source_id": "node-internet",
+    "target_id": "rds-postgres-prod",
+    "type": "EXPOSES_PORT_5432",
+    "confidence": 1.0,
+    "properties_json": "{\"protocol\": \"TCP\"}",
+    "created_at": "2026-09-11 10:57:58.781982"
+  },
+  {
+    "id": "edge_2_app-ecommerce-api_rds-postgres-prod",
+    "organization_id": "org-acme-01",
+    "source_id": "app-ecommerce-api",
+    "target_id": "rds-postgres-prod",
+    "type": "CONNECTS_TO",
+    "confidence": 1.0,
+    "properties_json": "{\"protocol\": \"TCP\"}",
+    "created_at": "2026-09-11 10:57:58.781982"
+  },
+  {
+    "id": "edge_3_app-ecommerce-api_app-payment-service",
+    "organization_id": "org-acme-01",
+    "source_id": "app-ecommerce-api",
+    "target_id": "app-payment-service",
+    "type": "INVOKES_API",
+    "confidence": 1.0,
+    "properties_json": "{\"protocol\": \"TCP\"}",
+    "created_at": "2026-09-11 10:57:58.781982"
+  },
+  {
+    "id": "edge_4_app-ecommerce-api_srv-k8s-cluster",
+    "organization_id": "org-acme-01",
+    "source_id": "app-ecommerce-api",
+    "target_id": "srv-k8s-cluster",
+    "type": "DEPLOYED_ON",
+    "confidence": 1.0,
+    "properties_json": "{\"protocol\": \"TCP\"}",
+    "created_at": "2026-09-11 10:57:58.781982"
+  },
+  {
+    "id": "edge_5_app-ecommerce-api_s3-product-images",
+    "organization_id": "org-acme-01",
+    "source_id": "app-ecommerce-api",
+    "target_id": "s3-product-images",
+    "type": "READS_WRITES",
+    "confidence": 1.0,
+    "properties_json": "{\"protocol\": \"TCP\"}",
+    "created_at": "2026-09-11 10:57:58.781982"
+  },
+  {
+    "id": "edge_6_rds-postgres-prod_data-customer-pii",
+    "organization_id": "org-acme-01",
+    "source_id": "rds-postgres-prod",
+    "target_id": "data-customer-pii",
+    "type": "STORES_DATA",
+    "confidence": 1.0,
+    "properties_json": "{\"protocol\": \"TCP\"}",
+    "created_at": "2026-09-11 10:57:58.781982"
+  },
+  {
+    "id": "edge_7_rds-postgres-prod_s3-customer-backups",
+    "organization_id": "org-acme-01",
+    "source_id": "rds-postgres-prod",
+    "target_id": "s3-customer-backups",
+    "type": "BACKS_UP_TO",
+    "confidence": 1.0,
+    "properties_json": "{\"protocol\": \"TCP\"}",
+    "created_at": "2026-09-11 10:57:58.781982"
+  },
+  {
+    "id": "edge_8_user-contractor-admin_iam-admin-role",
+    "organization_id": "org-acme-01",
+    "source_id": "user-contractor-admin",
+    "target_id": "iam-admin-role",
+    "type": "HAS_ROLE",
+    "confidence": 1.0,
+    "properties_json": "{\"protocol\": \"TCP\"}",
+    "created_at": "2026-09-11 10:57:58.781982"
+  },
+  {
+    "id": "edge_9_iam-admin-role_cloud-aws-prod",
+    "organization_id": "org-acme-01",
+    "source_id": "iam-admin-role",
+    "target_id": "cloud-aws-prod",
+    "type": "CONTROLS",
+    "confidence": 1.0,
+    "properties_json": "{\"protocol\": \"TCP\"}",
+    "created_at": "2026-09-11 10:57:58.781982"
+  },
+  {
+    "id": "edge_10_user-alex-founder_app-admin-dashboard",
+    "organization_id": "org-acme-01",
+    "source_id": "user-alex-founder",
+    "target_id": "app-admin-dashboard",
+    "type": "HAS_ACCESS_TO",
+    "confidence": 1.0,
+    "properties_json": "{\"protocol\": \"TCP\"}",
+    "created_at": "2026-09-11 10:57:58.781982"
+  },
+  {
+    "id": "edge_11_user-sarah-cto_app-admin-dashboard",
+    "organization_id": "org-acme-01",
+    "source_id": "user-sarah-cto",
+    "target_id": "app-admin-dashboard",
+    "type": "HAS_ACCESS_TO",
+    "confidence": 1.0,
+    "properties_json": "{\"protocol\": \"TCP\"}",
+    "created_at": "2026-09-11 10:57:58.781982"
+  },
+  {
+    "id": "edge_12_saas-analytics-bot_app-ecommerce-api",
+    "organization_id": "org-acme-01",
+    "source_id": "saas-analytics-bot",
+    "target_id": "app-ecommerce-api",
+    "type": "HAS_API_TOKEN",
+    "confidence": 1.0,
+    "properties_json": "{\"protocol\": \"TCP\"}",
+    "created_at": "2026-09-11 10:57:58.781982"
+  },
+  {
+    "id": "edge_13_dns-acme-domain_app-ecommerce-api",
+    "organization_id": "org-acme-01",
+    "source_id": "dns-acme-domain",
+    "target_id": "app-ecommerce-api",
+    "type": "ROUTES_TRAFFIC_TO",
+    "confidence": 1.0,
+    "properties_json": "{\"protocol\": \"TCP\"}",
+    "created_at": "2026-09-11 10:57:58.781982"
+  },
+  {
+    "id": "edge_14_dns-acme-domain_dns-dmarc-record",
+    "organization_id": "org-acme-01",
+    "source_id": "dns-acme-domain",
+    "target_id": "dns-dmarc-record",
+    "type": "CONTAINS_RECORD",
+    "confidence": 1.0,
+    "properties_json": "{\"protocol\": \"TCP\"}",
+    "created_at": "2026-09-11 10:57:58.781982"
+  },
+  {
+    "id": "edge_app_app-ecommerce-api_dep-lodash-4.17.20",
+    "organization_id": "org-acme-01",
+    "source_id": "app-ecommerce-api",
+    "target_id": "dep-lodash-4.17.20",
+    "type": "DEPENDS_ON",
+    "confidence": 1.0,
+    "properties_json": "{\"direct\": true}",
+    "created_at": "2026-09-11 11:03:54.175502"
+  },
+  {
+    "id": "edge_dep_dep-lodash-4.17.20_vuln-CVE-2021-23337",
+    "organization_id": "org-acme-01",
+    "source_id": "dep-lodash-4.17.20",
+    "target_id": "vuln-CVE-2021-23337",
+    "type": "CONTAINS",
+    "confidence": 1.0,
+    "properties_json": "{\"cvss\": 7.5}",
+    "created_at": "2026-09-11 11:03:54.175502"
+  },
+  {
+    "id": "edge_app_app-ecommerce-api_dep-jsonwebtoken-8.5.1",
+    "organization_id": "org-acme-01",
+    "source_id": "app-ecommerce-api",
+    "target_id": "dep-jsonwebtoken-8.5.1",
+    "type": "DEPENDS_ON",
+    "confidence": 1.0,
+    "properties_json": "{\"direct\": true}",
+    "created_at": "2026-09-11 11:03:54.175502"
+  },
+  {
+    "id": "edge_dep_dep-jsonwebtoken-8.5.1_vuln-CVE-2022-23529",
+    "organization_id": "org-acme-01",
+    "source_id": "dep-jsonwebtoken-8.5.1",
+    "target_id": "vuln-CVE-2022-23529",
+    "type": "CONTAINS",
+    "confidence": 1.0,
+    "properties_json": "{\"cvss\": 9.8}",
+    "created_at": "2026-09-11 11:03:54.182426"
+  },
+  {
+    "id": "edge_app_app-ecommerce-api_dep-express-4.18.2",
+    "organization_id": "org-acme-01",
+    "source_id": "app-ecommerce-api",
+    "target_id": "dep-express-4.18.2",
+    "type": "DEPENDS_ON",
+    "confidence": 1.0,
+    "properties_json": "{\"direct\": true}",
+    "created_at": "2026-09-11 11:03:54.184549"
+  },
+  {
+    "id": "edge_dep_dep-express-4.18.2_vuln-CVE-2024-43796",
+    "organization_id": "org-acme-01",
+    "source_id": "dep-express-4.18.2",
+    "target_id": "vuln-CVE-2024-43796",
+    "type": "CONTAINS",
+    "confidence": 1.0,
+    "properties_json": "{\"cvss\": 5.3}",
+    "created_at": "2026-09-11 11:03:54.184549"
+  },
+  {
+    "id": "edge_app_app-ecommerce-api_dep-axios-1.5.0",
+    "organization_id": "org-acme-01",
+    "source_id": "app-ecommerce-api",
+    "target_id": "dep-axios-1.5.0",
+    "type": "DEPENDS_ON",
+    "confidence": 1.0,
+    "properties_json": "{\"direct\": true}",
+    "created_at": "2026-09-11 11:03:54.184549"
+  },
+  {
+    "id": "edge_dep_dep-axios-1.5.0_vuln-CVE-2023-45857",
+    "organization_id": "org-acme-01",
+    "source_id": "dep-axios-1.5.0",
+    "target_id": "vuln-CVE-2023-45857",
+    "type": "CONTAINS",
+    "confidence": 1.0,
+    "properties_json": "{\"cvss\": 6.5}",
+    "created_at": "2026-09-11 11:03:54.184549"
+  }
+]

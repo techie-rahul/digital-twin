@@ -1,0 +1,32 @@
+{
+  "order_id": "pizza_order_#89234710",
+  "customer": {
+    "name": "Random Customer 404",
+    "phone": "+1-555-0199",
+    "address": "42 Galactic Way, Sector 7",
+    "coordinates": {
+      "lat": -33.8688,
+      "lng": 151.2093
+    }
+  },
+  "cart_items": [
+    {
+      "item": "Mega Cheese Deep Dish",
+      "size": "Extra Large",
+      "quantity": 3,
+      "extra_cheese": true
+    },
+    {
+      "item": "Garlic Dough Knots",
+      "dipping_sauce": "Spicy Marinara",
+      "quantity": 12
+    },
+    {
+      "item": "Sparkling Mountain Water 2L",
+      "quantity": 2
+    }
+  ],
+  "payment_method": "Dogecoin",
+  "crypto_tx_hash": "0x7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
+  "delivery_notes": "Leave near the garden gnome. Beware of angry Chihuahua."
+}

@@ -26,7 +26,8 @@ class SimulateRequest(BaseModel):
     seed: int = Field(42, description="Deterministic RNG seed.")
     target: Optional[str] = Field(None, description="Target asset ID. Defaults to crown jewel.")
     guided: bool = Field(True, description="Enable adaptive ML heuristic guidance.")
-    control_ids: Optional[List[str]] = Field(None, description="Optional list of control IDs active during simulation.")
+    control_ids: List[str] = Field(default_factory=list, description="Optional active control IDs to simulate with.")
+
 
 
 class CloneRequest(BaseModel):
@@ -51,6 +52,16 @@ class OptimizeRequest(BaseModel):
     budget: int = Field(..., ge=0, description="Maximum total control cost budget.")
     agent_ids: List[str] = Field(default_factory=list, description="Agent IDs to optimise against.")
     seed: int = Field(42, description="Deterministic RNG seed.")
+
+
+class CrawlAuditRequest(BaseModel):
+    """POST /crawl-audit — request body."""
+    twin_id: str = Field("twin-finbank-golden", description="Twin ID to audit.")
+    start_node: str = Field("internet", description="Asset ID where the agent starts.")
+    target_node: Optional[str] = Field(None, description="Asset ID the agent tries to reach. Defaults to highest-criticality crown jewel.")
+    active_control_ids: List[str] = Field(default_factory=list, description="Control IDs to treat as deployed.")
+    max_paths: int = Field(20, ge=1, le=100, description="Maximum number of paths to discover and audit.")
+    max_depth: int = Field(8, ge=1, le=20, description="Maximum path length in hops.")
 
 
 # ─────────────────────────────────────────────
