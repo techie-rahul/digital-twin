@@ -15,3 +15,7 @@ dashboard/node_modules/
 dashboard/dist/
 test-dashboard/
 .playwright-mcp/
+frontend/
+*.db
+*.zip
+

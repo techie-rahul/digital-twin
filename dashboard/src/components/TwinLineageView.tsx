@@ -18,16 +18,24 @@ import { LineageOut, LineageNodeOut } from '../types/api';
 import { apiClient } from '../api/client';
 
 interface TwinLineageViewProps {
+  initialTwinId?: string;
   onBackToDecisionStory?: () => void;
 }
 
 export const TwinLineageView: React.FC<TwinLineageViewProps> = ({
+  initialTwinId = 'twin-finbank-golden',
   onBackToDecisionStory,
 }) => {
-  const [twinId, setTwinId] = useState<string>('twin-finbank-golden');
+  const [twinId, setTwinId] = useState<string>(initialTwinId);
   const [lineageData, setLineageData] = useState<LineageOut | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialTwinId) {
+      setTwinId(initialTwinId);
+    }
+  }, [initialTwinId]);
 
   const fetchLineage = async () => {
     setIsLoading(true);
@@ -93,11 +101,14 @@ export const TwinLineageView: React.FC<TwinLineageViewProps> = ({
           <select
             value={twinId}
             onChange={(e) => setTwinId(e.target.value)}
-            className="bg-ash-50 border border-ash-200 rounded-lg px-3 py-1.5 text-xs font-mono text-ash-800 focus:outline-none focus:ring-1 focus:ring-brand-orange"
+            className="bg-ash-50 border border-ash-200 rounded-lg px-3 py-1.5 text-xs font-mono text-ash-800 focus:outline-none focus:ring-1 focus:ring-brand-orange cursor-pointer"
           >
-            <option value="twin-finbank-golden">twin-finbank-golden (Baseline Golden State)</option>
-            <option value="twin-finbank-mfa-eval">twin-finbank-mfa-eval (Clone: MFA Evaluation)</option>
-            <option value="twin-finbank-seg-eval">twin-finbank-seg-eval (Clone: Subnet Seg)</option>
+            <option value="twin-finbank-golden">🏦 twin-finbank-golden (Baseline Golden State)</option>
+            <option value="twin-cloudapp-easy">☁️ twin-cloudapp-easy (CloudApp MicroSaaS)</option>
+            <option value="twin-neobank-medium">💳 twin-neobank-medium (Neobank Payments)</option>
+            <option value="twin-globalbank-hard">🌐 twin-globalbank-hard (GlobalBank Enterprise)</option>
+            <option value="twin-finbank-mfa-eval">🔒 twin-finbank-mfa-eval (Clone: MFA Evaluation)</option>
+            <option value="twin-finbank-seg-eval">🛡️ twin-finbank-seg-eval (Clone: Subnet Seg)</option>
           </select>
         </div>
 

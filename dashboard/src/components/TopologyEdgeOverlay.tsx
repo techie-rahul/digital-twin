@@ -67,6 +67,7 @@ interface TopologyEdgeOverlayProps {
   hoveredNodeId?: string | null;
   onHoverEdge: (edgeId: string | null) => void;
   // Preset-aware props
+  currentTwinId?: string;
   activePresetId?: DemoPresetId;
   isReroutingActive?: boolean;
   reroutingCaption?: string;
@@ -93,6 +94,7 @@ export const TopologyEdgeOverlay: React.FC<TopologyEdgeOverlayProps> = ({
   hoveredEdgeId,
   hoveredNodeId,
   onHoverEdge,
+  currentTwinId = 'twin-finbank-golden',
   activePresetId,
   isReroutingActive = false,
   reroutingCaption,
@@ -166,27 +168,30 @@ export const TopologyEdgeOverlay: React.FC<TopologyEdgeOverlayProps> = ({
   // Check if an edge is blocked by active security controls
   const checkEdgeBlocked = useCallback(
     (src: string, dst: string, technique: string): { blocked: boolean; control?: Control } => {
-      // Check full segmentation preset override
-      if (isP1OutageActive || activePresetId === 'preset-full-seg') {
-        if (dst === 'prod-db') {
-          const segCtrl = controls.find((c) => c.id === 'ctrl-network-seg');
-          return { blocked: true, control: segCtrl };
+      // Preset overrides only apply on FinBank golden scenario
+      if (currentTwinId === 'twin-finbank-golden') {
+        // Check full segmentation preset override
+        if (isP1OutageActive || activePresetId === 'preset-full-seg') {
+          if (dst === 'prod-db') {
+            const segCtrl = controls.find((c) => c.id === 'ctrl-network-seg');
+            return { blocked: true, control: segCtrl };
+          }
         }
-      }
 
-      // Check MFA for humans override
-      if (isReroutingActive || activePresetId === 'preset-mfa') {
-        if ((src === 'ws-dev' && dst === 'jump-01') || (src === 'jump-01' && dst === 'prod-db')) {
-          const mfaCtrl = controls.find((c) => c.id === 'ctrl-mfa');
-          return { blocked: true, control: mfaCtrl };
+        // Check MFA for humans override
+        if (isReroutingActive || activePresetId === 'preset-mfa') {
+          if ((src === 'ws-dev' && dst === 'jump-01') || (src === 'jump-01' && dst === 'prod-db')) {
+            const mfaCtrl = controls.find((c) => c.id === 'ctrl-mfa');
+            return { blocked: true, control: mfaCtrl };
+          }
         }
-      }
 
-      // Check scoped segmentation override
-      if (activePresetId === 'preset-scoped-seg') {
-        if ((src === 'ws-dev' && dst === 'jump-01') || (src === 'ci-runner' && dst === 'jump-01')) {
-          const mfaCtrl = controls.find((c) => c.id === 'ctrl-mfa' || c.id === 'ctrl-scoped-seg');
-          return { blocked: true, control: mfaCtrl };
+        // Check scoped segmentation override
+        if (activePresetId === 'preset-scoped-seg') {
+          if ((src === 'ws-dev' && dst === 'jump-01') || (src === 'ci-runner' && dst === 'jump-01')) {
+            const mfaCtrl = controls.find((c) => c.id === 'ctrl-mfa' || c.id === 'ctrl-scoped-seg');
+            return { blocked: true, control: mfaCtrl };
+          }
         }
       }
 
@@ -343,9 +348,10 @@ export const TopologyEdgeOverlay: React.FC<TopologyEdgeOverlayProps> = ({
 
         const { blocked, control } = checkEdgeBlocked(edge.src, edge.dst, edge.technique);
 
-        const isRouteD = isRouteDEdgeCheck(edge.src, edge.dst);
-        const isDriftEdge = edge.src === 'ws-contractor' && (edge.dst === 'jump-01' || edge.dst === 'iam-auth');
+        const isRouteD = currentTwinId === 'twin-finbank-golden' && isRouteDEdgeCheck(edge.src, edge.dst);
+        const isDriftEdge = currentTwinId === 'twin-finbank-golden' && edge.src === 'ws-contractor' && (edge.dst === 'jump-01' || edge.dst === 'iam-auth');
         const isHumanRouteBlocked =
+          currentTwinId === 'twin-finbank-golden' &&
           isReroutingActive &&
           ((edge.src === 'ws-dev' && edge.dst === 'jump-01') ||
             (edge.src === 'jump-01' && edge.dst === 'prod-db') ||
@@ -404,9 +410,9 @@ export const TopologyEdgeOverlay: React.FC<TopologyEdgeOverlayProps> = ({
         const pathInfo = calculatePath(srcPos, dstPos, outIdx, outList.length, inIdx, inList.length, true);
         const isSevered =
           brokenFlowIds.includes(flow.id) ||
-          ((isP1OutageActive || activePresetId === 'preset-full-seg') && (flow.id === 'F3' || flow.id === 'F7'));
+          (currentTwinId === 'twin-finbank-golden' && (isP1OutageActive || activePresetId === 'preset-full-seg') && (flow.id === 'F3' || flow.id === 'F7'));
 
-        const isP1SeveredFlow = flow.id === 'F3' && isSevered;
+        const isP1SeveredFlow = currentTwinId === 'twin-finbank-golden' && flow.id === 'F3' && isSevered;
 
         const isInBlastRadius =
           isBlastMode &&

@@ -17,12 +17,16 @@ This file is glue only.
 """
 from __future__ import annotations
 
+import json
+import uuid
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import FileResponse, Response
 
-from backend.core.models import Agent, Control
-from backend.core.twin import CyberDigitalTwin
+from backend.core.models import Agent, Asset, Control, Edge, Identity, ServiceFlow, Twin
+from backend.core.twin import CyberDigitalTwin, canonical_twin_dict
 from backend.core.walk import simulate
 from backend.core.results import compute_results
 from backend.core.blast_radius import calculate_blast_radius
@@ -45,11 +49,26 @@ router = APIRouter()
 
 # ─────────────────────────────────────────────
 # Helpers
-# ─────────────────────────────────────────────
+def _scan_and_register_scenarios(registry: Dict[str, CyberDigitalTwin]) -> None:
+    """Scan backend/data/scenarios for any scenarios not yet in the active registry."""
+    scenarios_dir = Path(__file__).parent.parent / "data" / "scenarios"
+    if scenarios_dir.exists():
+        for p in scenarios_dir.glob("*.json"):
+            if p.name == "benchmarks.json":
+                continue
+            try:
+                dt = CyberDigitalTwin.from_file(p)
+                if dt.id not in registry:
+                    registry[dt.id] = dt
+            except Exception:
+                pass
+
 
 def _get_twin(request: Request, twin_id: str) -> CyberDigitalTwin:
-    """Resolve a twin_id from the app-state registry. Raises 404 if missing."""
+    """Resolve a twin_id from the app-state registry. Dynamically discovers newly added scenarios."""
     registry: Dict[str, CyberDigitalTwin] = request.app.state.twin_registry
+    if twin_id not in registry:
+        _scan_and_register_scenarios(registry)
     if twin_id not in registry:
         raise HTTPException(
             status_code=404,
@@ -69,14 +88,29 @@ def _get_agent(dt: CyberDigitalTwin, agent_id: str) -> Agent:
     )
 
 
-def _resolve_agent(request: Request, agent_id: str) -> Agent:
+def _resolve_agent(request: Request, agent_id: str, dt: Optional[CyberDigitalTwin] = None) -> Agent:
     agents: Dict[str, Agent] = request.app.state.agent_registry
     if agent_id not in agents:
         raise HTTPException(
             status_code=404,
             detail=f"Agent '{agent_id}' not found. Available: {list(agents.keys())}",
         )
-    return agents[agent_id]
+    base_agent = agents[agent_id]
+    if dt is not None:
+        creds = set(base_agent.capabilities)
+        for ident in dt.twin.identities:
+            creds.add(f"creds:{ident.id}")
+        creds.add("creds:who")
+        return Agent(
+            id=base_agent.id,
+            name=base_agent.name,
+            start_zones=base_agent.start_zones,
+            capabilities=frozenset(creds),
+            objective=base_agent.objective,
+            noise_budget=base_agent.noise_budget,
+            skill=base_agent.skill,
+        )
+    return base_agent
 
 
 def _twin_to_out(dt: CyberDigitalTwin) -> TwinOut:
@@ -125,10 +159,16 @@ def _twin_to_out(dt: CyberDigitalTwin) -> TwinOut:
 # GET /
 # ─────────────────────────────────────────────
 
+DIST_INDEX = Path(__file__).parent.parent.parent / "dashboard" / "dist" / "index.html"
+
 @router.get("/", response_model=HealthOut, tags=["Health"])
 @router.get("/health", response_model=HealthOut, tags=["Health"])
-def health(request: Request) -> HealthOut:
+def health(request: Request) -> Any:
     """Health check — confirms the server is alive and reports the loaded golden twin."""
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept and DIST_INDEX.is_file():
+        return FileResponse(DIST_INDEX)
+
     registry: Dict[str, CyberDigitalTwin] = request.app.state.twin_registry
     golden = request.app.state.golden_twin
     return HealthOut(
@@ -140,14 +180,323 @@ def health(request: Request) -> HealthOut:
 
 
 # ─────────────────────────────────────────────
-# GET /twin/{id}
+# GET /twins
 # ─────────────────────────────────────────────
+
+@router.get("/twins", response_model=List[str], tags=["Twin"])
+def list_twins(request: Request) -> List[str]:
+    """Return all available loaded twin IDs across scenarios."""
+    registry: Dict[str, CyberDigitalTwin] = request.app.state.twin_registry
+    _scan_and_register_scenarios(registry)
+    return list(registry.keys())
+
+
+# ─────────────────────────────────────────────
+# GET /twin (default) & GET /twin/{twin_id}
+# ─────────────────────────────────────────────
+
+@router.get("/twin", response_model=TwinOut, tags=["Twin"])
+def get_default_twin(request: Request) -> TwinOut:
+    """Return default golden twin (used by frontend dashboard root)."""
+    golden = request.app.state.golden_twin
+    if not golden:
+        raise HTTPException(status_code=404, detail="No digital twin loaded.")
+    return _twin_to_out(golden)
+
 
 @router.get("/twin/{twin_id}", response_model=TwinOut, tags=["Twin"])
 def get_twin(twin_id: str, request: Request) -> TwinOut:
     """Return full serialized Twin including assets, identities, edges, flows, and controls."""
     dt = _get_twin(request, twin_id)
     return _twin_to_out(dt)
+
+
+# ─────────────────────────────────────────────
+# POST /twin/import & GET /twin/{id}/export
+# ─────────────────────────────────────────────
+
+def _normalize_and_build_twin(payload: Any) -> CyberDigitalTwin:
+    """Safely validate, leniently normalize, and construct a CyberDigitalTwin from raw JSON data."""
+    if not isinstance(payload, dict):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Expected JSON object at root, received {type(payload).__name__}.",
+        )
+
+    # Support nested {"data": {...}} or {"twin": {...}} wrapping
+    data = payload.get("data") if isinstance(payload.get("data"), dict) else (
+        payload.get("twin") if isinstance(payload.get("twin"), dict) else payload
+    )
+    if not isinstance(data, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="Digital twin payload must be a JSON dictionary.",
+        )
+
+    # 1. Assets / Nodes inspection
+    raw_assets = data.get("assets")
+    if raw_assets is None:
+        raw_assets = data.get("nodes")
+
+    if raw_assets is None or not isinstance(raw_assets, list):
+        keys = list(data.keys())[:10]
+        raise HTTPException(
+            status_code=400,
+            detail=f"Schema mismatch: missing required 'assets' (or 'nodes') array. Keys found: {keys}",
+        )
+
+    if len(raw_assets) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid digital twin: 'assets' array cannot be empty.",
+        )
+
+    valid_kinds = {"server", "workstation", "database", "cloud_role", "share"}
+    normalized_assets: List[Asset] = []
+    seen_asset_ids = set()
+
+    for idx, item in enumerate(raw_assets):
+        if not isinstance(item, dict):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid asset at index {idx}: expected an object, got {type(item).__name__}.",
+            )
+        raw_id = str(item.get("id") or item.get("name") or f"asset-{idx+1}").strip()
+        asset_id = raw_id if raw_id else f"asset-{idx+1}"
+        if asset_id in seen_asset_ids:
+            asset_id = f"{asset_id}-{idx+1}"
+        seen_asset_ids.add(asset_id)
+
+        name = str(item.get("name") or asset_id)
+
+        # Kind normalization
+        kind = str(item.get("kind") or item.get("type") or item.get("asset_type") or "server").lower()
+        if kind not in valid_kinds:
+            if any(k in kind for k in ("data", "db", "sql", "postgres", "mongo", "ledger")):
+                kind = "database"
+            elif any(k in kind for k in ("workstation", "pc", "laptop", "terminal", "tablet", "client", "desktop")):
+                kind = "workstation"
+            elif any(k in kind for k in ("role", "iam", "cloud")):
+                kind = "cloud_role"
+            elif any(k in kind for k in ("share", "file", "smb", "nfs", "storage", "s3", "bucket")):
+                kind = "share"
+            else:
+                kind = "server"
+
+        # Zone normalization
+        zone = str(item.get("zone") or "corp").lower()
+        if zone not in {"dmz", "corp", "prod", "mgmt"}:
+            if any(z in zone for z in ("dmz", "public", "ext", "ingress")):
+                zone = "dmz"
+            elif any(z in zone for z in ("prod", "secure", "data", "app")):
+                zone = "prod"
+            elif any(z in zone for z in ("mgmt", "admin", "jump")):
+                zone = "mgmt"
+            else:
+                zone = "corp"
+
+        # Criticality normalization
+        crit_raw = item.get("criticality", 2)
+        if isinstance(crit_raw, str):
+            crit_map = {"low": 1, "medium": 2, "high": 3, "severe": 4, "critical": 5}
+            crit = crit_map.get(crit_raw.lower(), 2)
+        else:
+            try:
+                crit = int(crit_raw)
+                crit = max(1, min(5, crit))
+            except (ValueError, TypeError):
+                crit = 2
+
+        crown_jewel = bool(item.get("crown_jewel", False))
+        normalized_assets.append(
+            Asset(
+                id=asset_id,
+                name=name,
+                kind=kind,  # type: ignore[arg-type]
+                zone=zone,
+                criticality=crit,
+                crown_jewel=crown_jewel,
+            )
+        )
+
+    # 2. Edges / Relationships inspection
+    raw_edges = data.get("edges")
+    if raw_edges is None:
+        raw_edges = data.get("relationships") or data.get("links") or []
+
+    if not isinstance(raw_edges, list):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Expected 'edges' to be an array, got {type(raw_edges).__name__}.",
+        )
+
+    normalized_edges: List[Edge] = []
+    for item in raw_edges:
+        if not isinstance(item, dict):
+            continue
+        src = str(item.get("src") or item.get("source") or "").strip()
+        dst = str(item.get("dst") or item.get("target") or "").strip()
+        tech = str(item.get("technique") or item.get("relation_type") or item.get("type") or "network_access").strip()
+        if src and dst:
+            normalized_edges.append(Edge(src=src, dst=dst, technique=tech))
+
+    # 3. Identities inspection
+    raw_identities = data.get("identities", [])
+    valid_id_kinds = {"user", "admin", "service_account", "cloud_role"}
+    normalized_identities: List[Identity] = []
+    if isinstance(raw_identities, list):
+        for idx, item in enumerate(raw_identities):
+            if not isinstance(item, dict):
+                continue
+            i_id = str(item.get("id") or f"id-{idx+1}").strip()
+            i_name = str(item.get("name") or i_id)
+            i_kind = str(item.get("kind") or item.get("role") or "user").lower()
+            if i_kind not in valid_id_kinds:
+                i_kind = "admin" if "admin" in i_kind else "user"
+            try:
+                tier = max(0, int(item.get("tier", 1)))
+            except (ValueError, TypeError):
+                tier = 1
+            normalized_identities.append(Identity(id=i_id, name=i_name, kind=i_kind, tier=tier))  # type: ignore[arg-type]
+
+    # 4. Service Flows inspection
+    raw_flows = data.get("flows", [])
+    normalized_flows: List[ServiceFlow] = []
+    if isinstance(raw_flows, list):
+        for idx, item in enumerate(raw_flows):
+            if not isinstance(item, dict):
+                continue
+            f_id = str(item.get("id") or f"F{idx+1}").strip()
+            f_name = str(item.get("name") or f"Flow {f_id}")
+            f_src = str(item.get("src") or item.get("source") or "").strip()
+            f_dst = str(item.get("dst") or item.get("target") or "").strip()
+            f_tech = str(item.get("technique") or "service_request").strip()
+            try:
+                f_crit = max(1, min(5, int(item.get("criticality", 3))))
+            except (ValueError, TypeError):
+                f_crit = 3
+            if f_src and f_dst:
+                normalized_flows.append(
+                    ServiceFlow(id=f_id, name=f_name, src=f_src, dst=f_dst, technique=f_tech, criticality=f_crit)
+                )
+
+    # 5. Controls inspection
+    raw_controls = data.get("controls", [])
+    normalized_controls: List[Control] = []
+    if isinstance(raw_controls, list):
+        for idx, item in enumerate(raw_controls):
+            if not isinstance(item, dict):
+                continue
+            c_id = str(item.get("id") or f"ctrl-{idx+1}").strip()
+            c_name = str(item.get("name") or f"Control {c_id}")
+            try:
+                c_cost = max(0, int(item.get("cost", 1000)))
+            except (ValueError, TypeError):
+                c_cost = 1000
+
+            blocks = item.get("blocks", [])
+            if isinstance(blocks, (list, tuple)):
+                blocks_tuple = tuple(str(b) for b in blocks)
+            elif isinstance(blocks, str):
+                blocks_tuple = (blocks,)
+            else:
+                blocks_tuple = ()
+
+            scope = item.get("scope", item.get("covered_entities", []))
+            if isinstance(scope, (list, tuple)):
+                scope_tuple = tuple(str(s) for s in scope)
+            elif isinstance(scope, str):
+                scope_tuple = (scope,)
+            else:
+                scope_tuple = ()
+
+            try:
+                efficacy = float(item.get("efficacy", 0.9))
+                efficacy = max(0.0, min(1.0, efficacy))
+            except (ValueError, TypeError):
+                efficacy = 0.9
+
+            normalized_controls.append(
+                Control(
+                    id=c_id,
+                    name=c_name,
+                    cost=c_cost,
+                    blocks=blocks_tuple,
+                    scope=scope_tuple,
+                    efficacy=efficacy,
+                )
+            )
+
+    # Twin ID
+    twin_id = str(data.get("id") or data.get("scenario_id") or "").strip()
+    if not twin_id:
+        twin_id = f"twin-custom-{uuid.uuid4().hex[:6]}"
+
+    # Parent ID
+    parent_id = data.get("parent_id")
+    if parent_id is not None:
+        parent_id = str(parent_id)
+
+    twin = Twin(
+        id=twin_id,
+        assets=tuple(normalized_assets),
+        identities=tuple(normalized_identities),
+        edges=tuple(normalized_edges),
+        flows=tuple(normalized_flows),
+        controls=tuple(normalized_controls),
+        parent_id=parent_id,
+    )
+    return CyberDigitalTwin.from_twin(twin)
+
+
+@router.post("/twin/import", response_model=TwinOut, tags=["Twin"])
+def import_twin(payload: Dict[str, Any], request: Request) -> TwinOut:
+    """
+    Import, normalize, and register a new Cyber Digital Twin scenario from JSON.
+    Supports both canonical and relaxed/legacy formats with graceful error handling.
+    """
+    dt = _normalize_and_build_twin(payload)
+    registry: Dict[str, CyberDigitalTwin] = request.app.state.twin_registry
+    registry[dt.id] = dt
+
+    # Dynamically absorb credentials for any newly introduced identities into adversary agents
+    agents: Dict[str, Agent] = request.app.state.agent_registry
+    for ident in dt.twin.identities:
+        cred = f"creds:{ident.id}"
+        for aid, ag in list(agents.items()):
+            if cred not in ag.capabilities:
+                new_caps = set(ag.capabilities)
+                new_caps.add(cred)
+                agents[aid] = Agent(
+                    id=ag.id,
+                    name=ag.name,
+                    start_zones=ag.start_zones,
+                    capabilities=frozenset(new_caps),
+                    objective=ag.objective,
+                    noise_budget=ag.noise_budget,
+                    skill=ag.skill,
+                )
+
+    return _twin_to_out(dt)
+
+
+@router.get("/twin/{twin_id}/export", tags=["Twin"])
+def export_twin(twin_id: str, request: Request) -> Response:
+    """
+    Export full canonical JSON representation of a digital twin scenario.
+    Sets Content-Disposition header so browsers trigger a downloadable .json file.
+    """
+    dt = _get_twin(request, twin_id)
+    canonical = canonical_twin_dict(dt.twin)
+    json_bytes = json.dumps(canonical, indent=2).encode("utf-8")
+    return Response(
+        content=json_bytes,
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="{twin_id}.json"',
+            "Content-Type": "application/json; charset=utf-8",
+        },
+    )
 
 
 # ─────────────────────────────────────────────
@@ -204,7 +553,14 @@ def run_simulate(body: SimulateRequest, request: Request) -> SimulateOut:
     (twin_hash, agent_id, seed, n) — identical requests return instantly.
     """
     dt = _get_twin(request, body.twin_id)
-    agent = _resolve_agent(request, body.agent_id)
+    agent = _resolve_agent(request, body.agent_id, dt=dt)
+
+    if body.control_ids:
+        control_map = {c.id: c for c in dt.twin.controls}
+        add_controls = [control_map[cid] for cid in body.control_ids if cid in control_map]
+        if add_controls:
+            sim_id = f"{dt.id}-sim-{':'.join(sorted(body.control_ids))}"
+            dt = dt.clone(new_id=sim_id, add_controls=add_controls)
 
     twin_hash = dt.hash()
     cached = result_cache.get(twin_hash, body.agent_id, body.seed, body.n)
@@ -275,11 +631,10 @@ def evaluate_change(body: EvaluateChangeRequest, request: Request) -> Dict[str, 
     Uses Person 2's backend.rules.evaluate.evaluate_change() — LIVE.
     """
     dt = _get_twin(request, body.twin_id)
-    agent_registry: Dict[str, Agent] = request.app.state.agent_registry
 
-    # Resolve agent objects from string IDs (fall back to string if not in registry)
+    # Resolve agent objects from string IDs
     agent_ids = [
-        agent_registry.get(aid, aid) for aid in body.agent_ids
+        _resolve_agent(request, aid, dt=dt) for aid in body.agent_ids
     ] if body.agent_ids else []
 
     verdict = _real_evaluate_change(

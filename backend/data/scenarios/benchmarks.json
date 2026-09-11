@@ -1,0 +1,431 @@
+{
+  "twin-cloudapp-easy": {
+    "tier": "Easy (CloudApp MicroSaaS)",
+    "file": "backend/data/scenarios/easy.json",
+    "twin_id": "twin-cloudapp-easy",
+    "assets_count": 5,
+    "identities_count": 2,
+    "edges_count": 8,
+    "flows_count": 2,
+    "controls_count": 2,
+    "crown_jewels": [
+      "customer-db"
+    ],
+    "dependencies": [
+      {
+        "flow_id": "F1",
+        "flow_name": "Public Storefront Ingress Traffic",
+        "src": "cdn-gw",
+        "dst": "app-server",
+        "technique": "exploit_public_app",
+        "criticality": 3,
+        "is_mission_critical": false
+      },
+      {
+        "flow_id": "F2",
+        "flow_name": "Customer Orders & Payment Ledger Sync",
+        "src": "app-server",
+        "dst": "customer-db",
+        "technique": "db_login",
+        "criticality": 4,
+        "is_mission_critical": true
+      }
+    ],
+    "benchmarks": {
+      "insider_adversary": {
+        "agent_id": "agent-insider",
+        "start_zone": "corp",
+        "p_success_baseline": 0.226,
+        "mean_attacker_effort": 2.49,
+        "p90_attacker_effort": 5.0,
+        "feasible_attack_paths_count": 3,
+        "shortest_path_hops": 1,
+        "choke_points": {
+          "app-server->customer-db": 0.586,
+          "dev-laptop->app-server": 0.202,
+          "dev-laptop->customer-db": 0.414
+        }
+      },
+      "external_adversary": {
+        "agent_id": "agent-external",
+        "start_zone": "dmz",
+        "p_success_baseline": 0.0,
+        "mean_attacker_effort": 0.0,
+        "p90_attacker_effort": 0.0,
+        "feasible_attack_paths_count": 0,
+        "shortest_path_hops": null,
+        "choke_points": {}
+      },
+      "blast_radius_sample": {
+        "source_asset": "app-server",
+        "reachable_assets": [],
+        "compromised_crown_jewels": [],
+        "critical_assets": []
+      },
+      "recommended_portfolio": {
+        "budget": 1000,
+        "selected_controls": [
+          "ctrl-waf-easy"
+        ],
+        "total_cost": 800,
+        "risk_reduction": 0.0,
+        "broken_flows": [
+          "F1"
+        ],
+        "is_safe": true
+      }
+    }
+  },
+  "twin-neobank-medium": {
+    "tier": "Medium (Neobank Payments Core)",
+    "file": "backend/data/scenarios/medium.json",
+    "twin_id": "twin-neobank-medium",
+    "assets_count": 10,
+    "identities_count": 4,
+    "edges_count": 14,
+    "flows_count": 5,
+    "controls_count": 4,
+    "crown_jewels": [
+      "core-ledger-db",
+      "s3-archive"
+    ],
+    "dependencies": [
+      {
+        "flow_id": "F1",
+        "flow_name": "Customer Mobile Payment Requests",
+        "src": "internet",
+        "dst": "api-gateway",
+        "technique": "exploit_public_app",
+        "criticality": 3,
+        "is_mission_critical": false
+      },
+      {
+        "flow_id": "F2",
+        "flow_name": "OIDC Token Authorization Verification",
+        "src": "api-gateway",
+        "dst": "auth-idp",
+        "technique": "db_login",
+        "criticality": 4,
+        "is_mission_critical": true
+      },
+      {
+        "flow_id": "F3",
+        "flow_name": "Core Banking Ledger Transaction Commits",
+        "src": "ledger-service",
+        "dst": "core-ledger-db",
+        "technique": "db_login",
+        "criticality": 5,
+        "is_mission_critical": true
+      },
+      {
+        "flow_id": "F4",
+        "flow_name": "DevOps Automated Infrastructure CD Deployments",
+        "src": "ws-engineer",
+        "dst": "ci-pipeline",
+        "technique": "ssh_lateral",
+        "criticality": 3,
+        "is_mission_critical": false
+      },
+      {
+        "flow_id": "F5",
+        "flow_name": "Nightly Encrypted Disaster Recovery Snapshot",
+        "src": "bastion-mgmt",
+        "dst": "s3-archive",
+        "technique": "ssh_lateral",
+        "criticality": 4,
+        "is_mission_critical": true
+      }
+    ],
+    "benchmarks": {
+      "insider_adversary": {
+        "agent_id": "agent-insider",
+        "start_zone": "corp",
+        "p_success_baseline": 0.012,
+        "mean_attacker_effort": 6.67,
+        "p90_attacker_effort": 8.0,
+        "feasible_attack_paths_count": 3,
+        "shortest_path_hops": 2,
+        "choke_points": {
+          "bastion-mgmt->core-ledger-db": 0.112,
+          "ci-pipeline->bastion-mgmt": 0.666,
+          "ws-engineer->bastion-mgmt": 0.334,
+          "ws-engineer->ci-pipeline": 0.34
+        }
+      },
+      "external_adversary": {
+        "agent_id": "agent-external",
+        "start_zone": "dmz",
+        "p_success_baseline": 0.0,
+        "mean_attacker_effort": 0.0,
+        "p90_attacker_effort": 0.0,
+        "feasible_attack_paths_count": 0,
+        "shortest_path_hops": null,
+        "choke_points": {}
+      },
+      "blast_radius_sample": {
+        "source_asset": "api-gateway",
+        "reachable_assets": [],
+        "compromised_crown_jewels": [],
+        "critical_assets": []
+      },
+      "recommended_portfolio": {
+        "budget": 2500,
+        "selected_controls": [
+          "ctrl-credguard"
+        ],
+        "total_cost": 1000,
+        "risk_reduction": 0.0,
+        "broken_flows": [],
+        "is_safe": true
+      }
+    }
+  },
+  "twin-finbank-golden": {
+    "tier": "Golden (FinBank Primary CAB)",
+    "file": "backend/data/scenarios/golden.json",
+    "twin_id": "twin-finbank-golden",
+    "assets_count": 10,
+    "identities_count": 4,
+    "edges_count": 16,
+    "flows_count": 6,
+    "controls_count": 4,
+    "crown_jewels": [
+      "backup-01",
+      "prod-db"
+    ],
+    "dependencies": [
+      {
+        "flow_id": "F1",
+        "flow_name": "Customer Web Banking Traffic",
+        "src": "internet",
+        "dst": "web-dmz",
+        "technique": "exploit_public_app",
+        "criticality": 3,
+        "is_mission_critical": false
+      },
+      {
+        "flow_id": "F2",
+        "flow_name": "Web Portal API Integration",
+        "src": "web-dmz",
+        "dst": "payroll-api",
+        "technique": "db_login",
+        "criticality": 4,
+        "is_mission_critical": true
+      },
+      {
+        "flow_id": "F3",
+        "flow_name": "Payroll Transaction Ledger Commits",
+        "src": "payroll-api",
+        "dst": "prod-db",
+        "technique": "db_login",
+        "criticality": 5,
+        "is_mission_critical": true
+      },
+      {
+        "flow_id": "F4",
+        "flow_name": "Developer CI/CD Build Pipelines",
+        "src": "ws-dev",
+        "dst": "ci-runner",
+        "technique": "ssh_lateral",
+        "criticality": 3,
+        "is_mission_critical": false
+      },
+      {
+        "flow_id": "F5",
+        "flow_name": "Corporate File Sync & Archival",
+        "src": "ws-hr",
+        "dst": "fileshare",
+        "technique": "smb_lateral",
+        "criticality": 3,
+        "is_mission_critical": false
+      },
+      {
+        "flow_id": "F6",
+        "flow_name": "Disaster Recovery Backup Synchronization",
+        "src": "jump-01",
+        "dst": "backup-01",
+        "technique": "rdp_lateral",
+        "criticality": 4,
+        "is_mission_critical": true
+      }
+    ],
+    "benchmarks": {
+      "insider_adversary": {
+        "agent_id": "agent-insider",
+        "start_zone": "corp",
+        "p_success_baseline": 0.012,
+        "mean_attacker_effort": 6.33,
+        "p90_attacker_effort": 8.0,
+        "feasible_attack_paths_count": 3,
+        "shortest_path_hops": 2,
+        "choke_points": {
+          "ci-runner->jump-01": 0.68,
+          "jump-01->prod-db": 0.106,
+          "ws-dev->ci-runner": 0.334,
+          "ws-dev->jump-01": 0.32
+        }
+      },
+      "external_adversary": {
+        "agent_id": "agent-external",
+        "start_zone": "dmz",
+        "p_success_baseline": 0.0,
+        "mean_attacker_effort": 0.0,
+        "p90_attacker_effort": 0.0,
+        "feasible_attack_paths_count": 0,
+        "shortest_path_hops": null,
+        "choke_points": {}
+      },
+      "blast_radius_sample": {
+        "source_asset": "web-dmz",
+        "reachable_assets": [],
+        "compromised_crown_jewels": [],
+        "critical_assets": []
+      },
+      "recommended_portfolio": {
+        "budget": 3500,
+        "selected_controls": [
+          "ctrl-edr"
+        ],
+        "total_cost": 2000,
+        "risk_reduction": 0.001,
+        "broken_flows": [],
+        "is_safe": true
+      }
+    }
+  },
+  "twin-globalbank-hard": {
+    "tier": "Hard (GlobalBank Tier-0 Enterprise)",
+    "file": "backend/data/scenarios/hard.json",
+    "twin_id": "twin-globalbank-hard",
+    "assets_count": 18,
+    "identities_count": 6,
+    "edges_count": 27,
+    "flows_count": 8,
+    "controls_count": 6,
+    "crown_jewels": [
+      "activedir-dc",
+      "swift-gateway",
+      "core-ledger-db",
+      "hsm-vault",
+      "dr-backup-site"
+    ],
+    "dependencies": [
+      {
+        "flow_id": "F1",
+        "flow_name": "Global Retail Customer Banking Traffic",
+        "src": "ext-waf-us",
+        "dst": "portal-cluster",
+        "technique": "exploit_public_app",
+        "criticality": 3,
+        "is_mission_critical": false
+      },
+      {
+        "flow_id": "F2",
+        "flow_name": "OpenBanking API Transaction Integration",
+        "src": "ext-waf-eu",
+        "dst": "portal-cluster",
+        "technique": "exploit_public_app",
+        "criticality": 4,
+        "is_mission_critical": true
+      },
+      {
+        "flow_id": "F3",
+        "flow_name": "Payment Authorization & Fraud Scoring Bus",
+        "src": "portal-cluster",
+        "dst": "payment-api",
+        "technique": "db_login",
+        "criticality": 4,
+        "is_mission_critical": true
+      },
+      {
+        "flow_id": "F4",
+        "flow_name": "SWIFT Interbank Settlement Protocol",
+        "src": "payment-api",
+        "dst": "swift-gateway",
+        "technique": "db_login",
+        "criticality": 5,
+        "is_mission_critical": true
+      },
+      {
+        "flow_id": "F5",
+        "flow_name": "Core Banking Ledger Transaction Commits",
+        "src": "settle-engine",
+        "dst": "core-ledger-db",
+        "technique": "db_login",
+        "criticality": 5,
+        "is_mission_critical": true
+      },
+      {
+        "flow_id": "F6",
+        "flow_name": "Hardware Security Module Cryptographic Signing",
+        "src": "swift-gateway",
+        "dst": "hsm-vault",
+        "technique": "db_login",
+        "criticality": 5,
+        "is_mission_critical": true
+      },
+      {
+        "flow_id": "F7",
+        "flow_name": "Enterprise Document & Audit Record Sync",
+        "src": "ws-trader",
+        "dst": "corp-fileshare",
+        "technique": "smb_lateral",
+        "criticality": 3,
+        "is_mission_critical": false
+      },
+      {
+        "flow_id": "F8",
+        "flow_name": "Disaster Recovery Real-Time Mirroring",
+        "src": "jumpbox-mgmt",
+        "dst": "dr-backup-site",
+        "technique": "rdp_lateral",
+        "criticality": 4,
+        "is_mission_critical": true
+      }
+    ],
+    "benchmarks": {
+      "insider_adversary": {
+        "agent_id": "agent-insider",
+        "start_zone": "corp",
+        "p_success_baseline": 0.118,
+        "mean_attacker_effort": 4.03,
+        "p90_attacker_effort": 5.0,
+        "feasible_attack_paths_count": 3,
+        "shortest_path_hops": 3,
+        "choke_points": {
+          "payment-api->settle-engine": 1.0,
+          "settle-engine->core-ledger-db": 1.0,
+          "ws-trader->payment-api": 1.0
+        }
+      },
+      "external_adversary": {
+        "agent_id": "agent-external",
+        "start_zone": "dmz",
+        "p_success_baseline": 0.0,
+        "mean_attacker_effort": 0.0,
+        "p90_attacker_effort": 0.0,
+        "feasible_attack_paths_count": 0,
+        "shortest_path_hops": null,
+        "choke_points": {}
+      },
+      "blast_radius_sample": {
+        "source_asset": "ext-waf-eu",
+        "reachable_assets": [
+          "portal-cluster"
+        ],
+        "compromised_crown_jewels": [],
+        "critical_assets": []
+      },
+      "recommended_portfolio": {
+        "budget": 5000,
+        "selected_controls": [
+          "ctrl-credguard-corp"
+        ],
+        "total_cost": 1500,
+        "risk_reduction": 0.0,
+        "broken_flows": [],
+        "is_safe": true
+      }
+    }
+  }
+}

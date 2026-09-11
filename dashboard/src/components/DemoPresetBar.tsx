@@ -9,6 +9,7 @@ import {
   Clock,
   Sparkles,
   Info,
+  FileCode2,
 } from 'lucide-react';
 import { DemoPresetId, DemoPresetConfig } from '../types/presets';
 import { DEMO_PRESETS } from '../data/presetsData';
@@ -16,11 +17,13 @@ import { DEMO_PRESETS } from '../data/presetsData';
 interface DemoPresetBarProps {
   activePresetId: DemoPresetId;
   onSelectPreset: (presetId: DemoPresetId) => void;
+  onOpenDataStudio?: () => void;
 }
 
 export const DemoPresetBar: React.FC<DemoPresetBarProps> = ({
   activePresetId,
   onSelectPreset,
+  onOpenDataStudio,
 }) => {
   const presetsList = Object.values(DEMO_PRESETS);
   const activePreset = DEMO_PRESETS[activePresetId];
@@ -89,9 +92,22 @@ export const DemoPresetBar: React.FC<DemoPresetBarProps> = ({
           </span>
         </div>
 
-        <div className="text-[11px] font-mono text-ash-400 flex items-center gap-1">
-          <Clock className="w-3 h-3 text-ash-400" />
-          <span>Judges Q&A Interactive Mode</span>
+        <div className="flex items-center gap-2">
+          {onOpenDataStudio && (
+            <button
+              onClick={onOpenDataStudio}
+              title="Open Digital Twin JSON Data Studio (Import, Export, Copy-Paste, Test Error Files)"
+              className="px-2.5 py-1 rounded-lg bg-brand-orange hover:bg-brand-orange-hover text-white font-sans font-bold text-xs shadow-subtle flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+            >
+              <FileCode2 className="w-3.5 h-3.5" />
+              <span>Import / Export JSON</span>
+            </button>
+          )}
+
+          <div className="text-[11px] font-mono text-ash-400 hidden sm:flex items-center gap-1">
+            <Clock className="w-3 h-3 text-ash-400" />
+            <span>Judges Q&A Mode</span>
+          </div>
         </div>
       </div>
 

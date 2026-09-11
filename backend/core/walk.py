@@ -341,6 +341,12 @@ def simulate(
             crown_jewels = [a.id for a in twin.assets if getattr(a, "crown_jewel", False)]
             if "prod-db" in crown_jewels:
                 resolved_target = "prod-db"
+            elif "core-ledger-db" in crown_jewels:
+                resolved_target = "core-ledger-db"
+            elif "customer-db" in crown_jewels:
+                resolved_target = "customer-db"
+            elif "ehr-database" in crown_jewels:
+                resolved_target = "ehr-database"
             elif crown_jewels:
                 resolved_target = crown_jewels[0]
             elif any(a.id == "prod-db" for a in twin.assets):

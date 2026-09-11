@@ -34,30 +34,61 @@ logger = logging.getLogger("digital_twin.api")
 GOLDEN_SCENARIO_PATH = Path(__file__).parent.parent / "data" / "scenarios" / "golden.json"
 
 
-def _build_finbank_agents() -> Dict[str, Agent]:
+def _build_finbank_agents(twin_registry: Optional[Dict[str, CyberDigitalTwin]] = None) -> Dict[str, Agent]:
     """
-    Canonical FinBank adversary agents used in all simulations and demos.
-
-    agent-external: unauthenticated attacker from the internet/DMZ zone.
-    agent-insider:  malicious insider in the corporate zone with admin credentials.
-
-    These match the objective/zone values meaningful for the FinBank golden scenario.
+    Canonical adversary agents used in all simulations and demos.
+    Dynamically absorbs identities across all loaded scenarios (FinBank, Easy, Medium, Hard, Medicare).
     """
+    ext_creds = {
+        "creds:id-user-admin",
+        "creds:id-admin-cloud",
+        "creds:id-cloud-sec",
+        "creds:id-admin-domain",
+        "creds:id-user-dev",
+        "creds:id-user-customer",
+        "creds:id-sre-lead",
+        "creds:id-sec-ops",
+        "creds:id-user-patient",
+        "creds:id-user-doctor",
+        "creds:id-admin-biomed",
+        "creds:who",
+    }
+    insider_creds = {
+        "creds:id-user-admin",
+        "creds:id-admin-cloud",
+        "creds:id-cloud-sec",
+        "creds:id-admin-domain",
+        "creds:id-user-dev",
+        "creds:id-user-analyst",
+        "creds:id-sre-lead",
+        "creds:id-sec-ops",
+        "creds:id-trader-fx",
+        "creds:id-user-doctor",
+        "creds:id-admin-biomed",
+        "creds:who",
+    }
+
+    if twin_registry:
+        for dt in twin_registry.values():
+            for ident in dt.twin.identities:
+                ext_creds.add(f"creds:{ident.id}")
+                insider_creds.add(f"creds:{ident.id}")
+
     return {
         "agent-external": Agent(
             id="agent-external",
             name="External Threat Actor",
             start_zones=("dmz",),
-            capabilities=frozenset(),
+            capabilities=frozenset(ext_creds),
             objective="specific_target",
             noise_budget=1.0,
-            skill=0.5,
+            skill=0.7,
         ),
         "agent-insider": Agent(
             id="agent-insider",
             name="Malicious Insider (Corp)",
             start_zones=("corp",),
-            capabilities=frozenset(["creds:id-user-admin"]),
+            capabilities=frozenset(insider_creds),
             objective="specific_target",
             noise_budget=1.0,
             skill=0.8,
@@ -71,29 +102,29 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     FastAPI lifespan context manager.
     Runs startup logic before yielding, shutdown logic on exit.
     """
-    # ── STARTUP ──────────────────────────────────────────────────────────
-    logger.info("Loading FinBank golden scenario from %s", GOLDEN_SCENARIO_PATH)
-
+    # Load all scenarios in backend/data/scenarios/
     twin_registry: Dict[str, CyberDigitalTwin] = {}
     golden_twin: Optional[CyberDigitalTwin] = None
-
-    if GOLDEN_SCENARIO_PATH.exists():
+    scenarios_dir = Path(__file__).parent.parent / "data" / "scenarios"
+    for scenario_path in sorted(scenarios_dir.glob("*.json")):
+        if scenario_path.name == "benchmarks.json":
+            continue
         try:
-            golden_twin = CyberDigitalTwin.from_file(GOLDEN_SCENARIO_PATH)
-            twin_registry[golden_twin.id] = golden_twin
+            dt = CyberDigitalTwin.from_file(scenario_path)
+            twin_registry[dt.id] = dt
+            if scenario_path.name == "golden.json":
+                golden_twin = dt
             logger.info(
-                "Golden twin loaded: id=%s hash=%s assets=%d edges=%d",
-                golden_twin.id,
-                golden_twin.hash()[:16],
-                golden_twin.asset_count,
-                golden_twin.edge_count,
+                "Scenario loaded: id=%s (%s) assets=%d edges=%d",
+                dt.id, scenario_path.name, dt.asset_count, dt.edge_count
             )
         except Exception as exc:
-            logger.error("Failed to load golden scenario: %s", exc)
-    else:
-        logger.warning("Golden scenario not found at %s", GOLDEN_SCENARIO_PATH)
+            logger.error("Failed to load scenario %s: %s", scenario_path.name, exc)
 
-    agent_registry = _build_finbank_agents()
+    if golden_twin is None and twin_registry:
+        golden_twin = next(iter(twin_registry.values()))
+
+    agent_registry = _build_finbank_agents(twin_registry)
     logger.info("Registered agents: %s", list(agent_registry.keys()))
 
     app.state.twin_registry = twin_registry

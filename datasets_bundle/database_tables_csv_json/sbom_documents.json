@@ -1,0 +1,28 @@
+[
+  {
+    "id": "sbom_e586e4d7af4d",
+    "organization_id": "org-acme-01",
+    "format": "CycloneDX",
+    "spec_version": "1.4",
+    "serial_number": null,
+    "application_name": "ecommerce-api",
+    "version": "1.2.0",
+    "total_components": 4,
+    "vulnerable_components": 4,
+    "created_at": "2026-09-11 11:03:54.162037",
+    "raw_content": "{\r\n  \"bomFormat\": \"CycloneDX\",\r\n  \"specVersion\": \"1.4\",\r\n  \"metadata\": {\r\n    \"component\": {\r\n      \"name\": \"ecommerce-api\",\r\n      \"version\": \"1.2.0\",\r\n      \"type\": \"application\"\r\n    }\r\n  },\r\n  \"components\": [\r\n    {\r\n      \"name\": \"lodash\",\r\n      \"version\": \"4.17.20\",\r\n      \"purl\": \"pkg:npm/lodash@4.17.20\",\r\n      \"licenses\": [{\"license\": {\"id\": \"MIT\"}}]\r\n    },\r\n    {\r\n      \"name\": \"jsonwebtoken\",\r\n      \"version\": \"8.5.1\",\r\n      \"purl\": \"pkg:npm/jsonwebtoken@8.5.1\",\r\n      \"licenses\": [{\"license\": {\"id\": \"MIT\"}}]\r\n    },\r\n    {\r\n      \"name\": \"express\",\r\n      \"version\": \"4.18.2\",\r\n      \"purl\": \"pkg:npm/express@4.18.2\",\r\n      \"licenses\": [{\"license\": {\"id\": \"MIT\"}}]\r\n    },\r\n    {\r\n      \"name\": \"axios\",\r\n      \"version\": \"1.5.0\",\r\n      \"purl\": \"pkg:npm/axios@1.5.0\",\r\n      \"licenses\": [{\"license\": {\"id\": \"MIT\"}}]\r\n    }\r\n  ]\r\n}"
+  },
+  {
+    "id": "sbom_bedadf34c910",
+    "organization_id": "org-acme-01",
+    "format": "CycloneDX",
+    "spec_version": "1.4",
+    "serial_number": null,
+    "application_name": "ecommerce-api",
+    "version": "1.2.0",
+    "total_components": 2,
+    "vulnerable_components": 2,
+    "created_at": "2026-09-11 11:04:42.979232",
+    "raw_content": "{\r\n          \"bomFormat\": \"CycloneDX\",\r\n          \"specVersion\": \"1.4\",\r\n          \"metadata\": { \"component\": { \"name\": \"ecommerce-api\", \"version\": \"1.2.0\" } },\r\n          \"components\": [\r\n            { \"name\": \"lodash\", \"version\": \"4.17.20\", \"purl\": \"pkg:npm/lodash@4.17.20\", \"licenses\": [{\"license\": {\"id\": \"MIT\"}}] },\r\n            { \"name\": \"jsonwebtoken\", \"version\": \"8.5.1\", \"purl\": \"pkg:npm/jsonwebtoken@8.5.1\" }\r\n          ]\r\n        }"
+  }
+]

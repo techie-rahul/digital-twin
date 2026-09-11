@@ -35,6 +35,7 @@ interface TopologyCanvasProps {
   activeControlNames: string[];
   blastRadiusData?: BlastRadiusResponse | null;
   onClearBlastRadius?: () => void;
+  currentTwinId?: string;
   // Demo Preset Props
   activePresetId?: DemoPresetId;
   isReroutingActive?: boolean;
@@ -60,6 +61,7 @@ export const TopologyCanvas: React.FC<TopologyCanvasProps> = ({
   activeControlNames,
   blastRadiusData = null,
   onClearBlastRadius,
+  currentTwinId,
   activePresetId,
   isReroutingActive,
   reroutingCaption,
@@ -193,9 +195,10 @@ export const TopologyCanvas: React.FC<TopologyCanvasProps> = ({
       return 'compromised';
     }
     // Protected node verification
+    const isCrownJewel = assets.find((a) => a.id === assetId)?.crown_jewel;
     if (
       activeControlNames.length > 0 &&
-      (assetId === 'prod-db' || assetId === 'backup-01') &&
+      (isCrownJewel || assetId === 'prod-db' || assetId === 'backup-01') &&
       !compromisedNodeIds.includes(assetId)
     ) {
       return 'protected';
@@ -428,6 +431,7 @@ export const TopologyCanvas: React.FC<TopologyCanvasProps> = ({
           viewMode={viewMode}
           hoveredEdgeId={hoveredEdgeId}
           onHoverEdge={setHoveredEdgeId}
+          currentTwinId={currentTwinId}
           activePresetId={activePresetId}
           isReroutingActive={isReroutingActive}
           reroutingCaption={reroutingCaption}

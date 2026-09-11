@@ -1,0 +1,34 @@
+[
+  {
+    "id": "sim_6bf5e2c5e8",
+    "organization_id": "org-acme-01",
+    "simulation_type": "SECURITY_MECHANISM",
+    "change_description": "Simulate Security Mechanism: RESTRICT_DATABASE_ACCESS",
+    "parameters": "{}",
+    "score_before": 83.9,
+    "score_after": 94.0,
+    "score_delta": 10.1,
+    "attack_paths_before": 20,
+    "attack_paths_after": 20,
+    "blast_radius_before": "CRITICAL",
+    "blast_radius_after": "HIGH",
+    "diff_summary": "{\"diff\": [{\"metric\": \"Overall Security Posture\", \"before\": \"83.9/100\", \"after\": \"94.0/100\", \"improvement\": true}, {\"metric\": \"Viable Attack Paths\", \"before\": 20, \"after\": 20, \"improvement\": false}, {\"metric\": \"Crown-Jewel Blast Radius\", \"before\": \"CRITICAL\", \"after\": \"HIGH\", \"improvement\": true}], \"verdict\": \"Simulation Confirmed: Applying 'RESTRICT_DATABASE_ACCESS' eliminates 1 attack paths and raises your posture from 83.9 to 94.0 (+10.1 points).\"}",
+    "created_at": "2026-09-11 10:57:58.958558"
+  },
+  {
+    "id": "sim_469159ed1c",
+    "organization_id": "org-acme-01",
+    "simulation_type": "FEATURE_INTRODUCTION",
+    "change_description": "Simulate Feature: Customer document upload",
+    "parameters": "{\"feature\": \"Customer document upload\", \"components\": [{\"name\": \"acme-customer-kyc-docs\", \"type\": \"StorageBucket\", \"is_public\": true, \"contains_pii\": true}]}",
+    "score_before": 83.9,
+    "score_after": 71.9,
+    "score_delta": -12.0,
+    "attack_paths_before": 20,
+    "attack_paths_after": 25,
+    "blast_radius_before": "HIGH",
+    "blast_radius_after": "CRITICAL",
+    "diff_summary": "{\"diff\": [{\"metric\": \"Overall Security Posture\", \"before\": \"83.9/100\", \"after\": \"71.9/100\", \"improvement\": false}, {\"metric\": \"Attack Paths Created\", \"before\": 20, \"after\": 25, \"improvement\": false}, {\"metric\": \"Blast Radius Level\", \"before\": \"HIGH\", \"after\": \"CRITICAL\", \"improvement\": false}], \"verdict\": \"Simulation Warning: Deploying 'Customer document upload' as currently configured creates 5 new public attack paths and lowers your posture score from 83.9 to 71.9 (-12.0 pts). Recommended: Enable private access controls before shipping to production.\"}",
+    "created_at": "2026-09-11 10:57:59.000179"
+  }
+]

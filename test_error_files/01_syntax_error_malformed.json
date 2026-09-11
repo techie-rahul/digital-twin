@@ -1,0 +1,6 @@
+{
+  "status": "error",
+  "broken_syntax": true,
+  "unclosed_array": [1, 2, 3,
+  "trailing_comma": "oops",
+  "unquoted_key": 999,

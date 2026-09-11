@@ -1,0 +1,9 @@
+id,name,role,salary,notes
+1,Normal User,Analyst,75000,Standard user
+2,=cmd|' /C calc'!A0,Executive,150000,"Formula injection DDE test"
+3,=1+1,Finance,90000,=SUM(A1:A100)
+4,"Unclosed quotes in CSV field,Developer,120000,This row misses closing quote
+5,Too,Many,Columns,For,This,Row,1,2,3,4,5,6
+6,Missing Columns
+7,Mixed,Delimiters;With|Tabs	And,Commas,100
+8,SpecialChars,⚡💀🔥™®©,"Emojis and unicode: ‮ RLO attack"

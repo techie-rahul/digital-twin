@@ -1,0 +1,245 @@
+{
+  "id": "twin-medicare-hospital",
+  "assets": [
+    {
+      "id": "internet",
+      "name": "Public Patient Web Ingress",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 1,
+      "crown_jewel": false
+    },
+    {
+      "id": "patient-portal",
+      "name": "Patient Appointment & Telehealth Portal",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "doctor-tablet",
+      "name": "Emergency Ward Doctor Tablet",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "radiology-pacs",
+      "name": "Radiology PACS Imaging Server",
+      "kind": "server",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "nurse-station",
+      "name": "ICU Central Nurse Terminal",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "telehealth-api",
+      "name": "Clinical Integration Gateway",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "ehr-database",
+      "name": "Electronic Health Records & Patient PII DB",
+      "kind": "database",
+      "zone": "prod",
+      "criticality": 5,
+      "crown_jewel": true
+    },
+    {
+      "id": "icu-telemetry",
+      "name": "ICU Real-Time Bedside Telemetry Controller",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 5,
+      "crown_jewel": true
+    }
+  ],
+  "identities": [
+    {
+      "id": "id-user-patient",
+      "name": "Outpatient User",
+      "kind": "user",
+      "tier": 3
+    },
+    {
+      "id": "id-user-doctor",
+      "name": "Attending Physician",
+      "kind": "user",
+      "tier": 2
+    },
+    {
+      "id": "id-admin-biomed",
+      "name": "BioMed Systems Administrator",
+      "kind": "admin",
+      "tier": 0
+    }
+  ],
+  "edges": [
+    {
+      "src": "internet",
+      "dst": "patient-portal",
+      "technique": "exploit_public_app"
+    },
+    {
+      "src": "patient-portal",
+      "dst": "telehealth-api",
+      "technique": "db_login"
+    },
+    {
+      "src": "patient-portal",
+      "dst": "doctor-tablet",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "doctor-tablet",
+      "dst": "radiology-pacs",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "radiology-pacs",
+      "dst": "ehr-database",
+      "technique": "db_login"
+    },
+    {
+      "src": "telehealth-api",
+      "dst": "ehr-database",
+      "technique": "db_login"
+    },
+    {
+      "src": "nurse-station",
+      "dst": "telehealth-api",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "nurse-station",
+      "dst": "icu-telemetry",
+      "technique": "rdp_lateral"
+    },
+    {
+      "src": "doctor-tablet",
+      "dst": "nurse-station",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "id-user-patient",
+      "dst": "patient-portal",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-user-doctor",
+      "dst": "doctor-tablet",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-user-doctor",
+      "dst": "nurse-station",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-admin-biomed",
+      "dst": "telehealth-api",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-admin-biomed",
+      "dst": "ehr-database",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-admin-biomed",
+      "dst": "icu-telemetry",
+      "technique": "db_login"
+    }
+  ],
+  "flows": [
+    {
+      "id": "F1",
+      "name": "Patient Telehealth Booking Traffic",
+      "src": "internet",
+      "dst": "patient-portal",
+      "technique": "exploit_public_app",
+      "criticality": 3
+    },
+    {
+      "id": "F2",
+      "name": "Physician EHR Prescription Sync",
+      "src": "telehealth-api",
+      "dst": "ehr-database",
+      "technique": "db_login",
+      "criticality": 5
+    },
+    {
+      "id": "F3",
+      "name": "Radiology Diagnostic Image Sync",
+      "src": "doctor-tablet",
+      "dst": "radiology-pacs",
+      "technique": "smb_lateral",
+      "criticality": 4
+    },
+    {
+      "id": "F4",
+      "name": "ICU Continuous Bedside Telemetry Stream",
+      "src": "nurse-station",
+      "dst": "icu-telemetry",
+      "technique": "rdp_lateral",
+      "criticality": 5
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-hospital-mfa",
+      "name": "Clinical Workstation MFA Enforcement",
+      "cost": 1200,
+      "blocks": [
+        "rdp_lateral",
+        "ssh_lateral",
+        "T1021.001",
+        "T1021.004"
+      ],
+      "scope": [
+        "nurse-station",
+        "icu-telemetry"
+      ],
+      "efficacy": 0.9
+    },
+    {
+      "id": "ctrl-pacs-microseg",
+      "name": "PACS Network Microsegmentation",
+      "cost": 1800,
+      "blocks": [
+        "smb_lateral",
+        "T1021.002"
+      ],
+      "scope": [
+        "radiology-pacs"
+      ],
+      "efficacy": 0.95
+    },
+    {
+      "id": "ctrl-ehr-guard",
+      "name": "Zero-Trust DB Authentication Barrier",
+      "cost": 2200,
+      "blocks": [
+        "db_login",
+        "T1078"
+      ],
+      "scope": [
+        "ehr-database"
+      ],
+      "efficacy": 0.92
+    }
+  ],
+  "parent_id": null
+}

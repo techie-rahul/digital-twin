@@ -479,3 +479,128 @@ def test_crawl_audit_alias_audit(client):
     assert body["target_node"] == "prod-db"
     assert "summary" in body
 
+
+# ─────────────────────────────────────────────
+# 13. POST /twin/import & GET /twin/{id}/export
+# ─────────────────────────────────────────────
+
+def test_import_twin_valid(client):
+    custom_id = "twin-custom-test-01"
+    payload = {
+        "id": custom_id,
+        "assets": [
+            {"id": "entry-server", "name": "Entry Gateway", "kind": "server", "zone": "dmz", "criticality": 1, "crown_jewel": False},
+            {"id": "secure-vault", "name": "Secure Vault", "kind": "database", "zone": "prod", "criticality": 5, "crown_jewel": True},
+        ],
+        "edges": [
+            {"src": "entry-server", "dst": "secure-vault", "technique": "direct_exploit"},
+        ],
+        "identities": [
+            {"id": "user-guest", "name": "Guest User", "kind": "user", "tier": 3},
+        ],
+        "flows": [
+            {"id": "f-sync", "name": "Vault Sync", "src": "entry-server", "dst": "secure-vault", "technique": "sync", "criticality": 5},
+        ],
+        "controls": [
+            {"id": "c-vault-fw", "name": "Vault Firewall", "cost": 5000, "blocks": ["direct_exploit"], "scope": ["secure-vault"], "efficacy": 0.95},
+        ],
+    }
+    r = client.post("/twin/import", json=payload)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["id"] == custom_id
+    assert body["asset_count"] == 2
+    assert body["edge_count"] == 1
+    assert body["control_count"] == 1
+
+    # Verify newly imported twin is discoverable via GET /twin/{id}
+    r_get = client.get(f"/twin/{custom_id}")
+    assert r_get.status_code == 200
+    assert r_get.json()["id"] == custom_id
+
+    # Verify newly imported twin is in GET /twins list
+    r_twins = client.get("/twins")
+    assert r_twins.status_code == 200
+    assert custom_id in r_twins.json()
+
+
+def test_import_twin_relaxed_graph_format(client):
+    """Verify tolerant normalization of nodes/relationships and auto-defaults."""
+    relaxed_payload = {
+        "scenario_id": "twin-relaxed-graph",
+        "nodes": [
+            {"name": "web-node", "type": "web_server", "zone": "dmz", "criticality": "high"},
+            {"name": "db-node", "type": "database", "zone": "data_secure", "criticality": 5, "crown_jewel": True},
+        ],
+        "relationships": [
+            {"source": "web-node", "target": "db-node", "relation_type": "ACCESSES"},
+        ],
+    }
+    r = client.post("/twin/import", json=relaxed_payload)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["id"] == "twin-relaxed-graph"
+    assert body["asset_count"] == 2
+    assert body["edge_count"] == 1
+
+
+def test_import_twin_random_data_error(client):
+    """Completely random data (e.g. pizza order) must return 400 Bad Request with clear detail."""
+    random_payload = {
+        "order_id": "pizza_order_#89234710",
+        "customer": {"name": "Random Customer 404"},
+        "cart_items": [{"item": "Mega Cheese Deep Dish", "quantity": 3}],
+        "payment_method": "Dogecoin",
+    }
+    r = client.post("/twin/import", json=random_payload)
+    assert r.status_code == 400
+    assert "schema mismatch" in r.json()["detail"].lower()
+
+
+def test_import_twin_empty_assets_error(client):
+    """Empty assets list must return 400 Bad Request."""
+    r = client.post("/twin/import", json={"id": "empty-twin", "assets": []})
+    assert r.status_code == 400
+    assert "cannot be empty" in r.json()["detail"].lower()
+
+
+def test_export_twin(client):
+    """GET /twin/{twin_id}/export returns canonical JSON download."""
+    r = client.get(f"/twin/{GOLDEN_ID}/export")
+    assert r.status_code == 200
+    assert "attachment" in r.headers.get("content-disposition", "")
+    assert f"{GOLDEN_ID}.json" in r.headers.get("content-disposition", "")
+    data = r.json()
+    assert data["id"] == GOLDEN_ID
+    assert "assets" in data
+    assert "edges" in data
+
+
+def test_import_against_all_test_error_files(client):
+    """
+    Ensure all files in test_error_files directory are handled cleanly without 500 Internal Server Error.
+    Invalid/malformed files must return 400 or 422; valid files return 200.
+    """
+    from pathlib import Path
+    import json
+
+    error_dir = Path("test_error_files")
+    if not error_dir.exists():
+        return
+
+    for file_path in error_dir.iterdir():
+        if file_path.suffix == ".md":
+            continue
+        try:
+            raw_bytes = file_path.read_bytes()
+        except Exception:
+            continue
+
+        headers = {"Content-Type": "application/json"}
+        r = client.post("/twin/import", content=raw_bytes, headers=headers)
+        # Verify server never crashes with an unhandled 500 Internal Server Error
+        assert r.status_code != 500, f"Server returned 500 on test file {file_path.name}: {r.text}"
+        assert r.status_code in (200, 400, 422), f"Unexpected status {r.status_code} on {file_path.name}"
+
+
+

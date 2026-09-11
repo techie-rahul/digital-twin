@@ -1,5 +1,10 @@
 import {
   Twin,
+  Asset,
+  Edge,
+  ServiceFlow,
+  Control,
+  Identity,
   SimulateResponse,
   ChangeVerdict,
   OptimizationResult,
@@ -12,14 +17,64 @@ import {
 const API_BASE = '/api';
 
 export const apiClient = {
-  async getTwin(): Promise<Twin> {
+  async getTwin(twinId?: string): Promise<Twin> {
     try {
-      const res = await fetch(`${API_BASE}/twin`);
+      const url = twinId ? `${API_BASE}/twin/${twinId}` : `${API_BASE}/twin`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       return await res.json();
     } catch (e) {
       console.warn('Falling back to local golden twin fixture:', e);
       return getFallbackTwin();
+    }
+  },
+
+  async getTwins(): Promise<string[]> {
+    try {
+      const res = await fetch(`${API_BASE}/twins`);
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      return await res.json();
+    } catch {
+      return ['twin-finbank-golden', 'twin-cloudapp-easy', 'twin-neobank-medium', 'twin-globalbank-hard', 'twin-medicare-hospital'];
+    }
+  },
+
+  async importTwin(payload: any): Promise<Twin> {
+    try {
+      const res = await fetch(`${API_BASE}/twin/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        let errDetail = `HTTP ${res.status}`;
+        try {
+          const body = await res.json();
+          if (body.detail) {
+            errDetail = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
+          }
+        } catch {
+          // fallback
+        }
+        throw new Error(errDetail);
+      }
+      return await res.json();
+    } catch (e: any) {
+      if (e.message && (e.message.includes('Schema mismatch') || e.message.includes('Invalid digital twin') || e.message.includes('cannot be empty'))) {
+        throw e;
+      }
+      console.warn('Backend import unavailable or network error, applying local normalization:', e);
+      return clientNormalizeTwin(payload);
+    }
+  },
+
+  async exportTwin(twinId: string): Promise<Twin> {
+    try {
+      const res = await fetch(`${API_BASE}/twin/${twinId}/export`);
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      return await res.json();
+    } catch {
+      return apiClient.getTwin(twinId);
     }
   },
 
@@ -46,28 +101,36 @@ export const apiClient = {
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       const data = await res.json();
       if (data.candidate_routes && Array.isArray(data.candidate_routes)) {
-        const topRoute = data.candidate_routes[0];
+        const topRoute = data.candidate_routes.length > 0 ? data.candidate_routes[0] : null;
         const nodes: string[] = topRoute ? topRoute.nodes : [];
+        const isBlocked = !!(params.control_ids && params.control_ids.length > 0 && data.p_success === 0);
         return {
           twin_id: data.twin_id,
           agent_id: data.agent_id,
           p_success: data.p_success,
           mean_effort: data.mean_effort ?? 0,
           p90_effort: null,
-          compromised_nodes: nodes,
+          compromised_nodes: isBlocked && nodes.length > 1 ? nodes.slice(0, -1) : nodes,
           choke_points: {},
           exemplar_paths: topRoute ? [topRoute.nodes] : [],
-          attack_trajectory: nodes.map((nodeId, idx) => ({
-            step_index: idx + 1,
-            asset_id: nodeId,
-            asset_name: nodeId,
-            zone: 'corp',
-            technique: 'lateral_movement',
-            status: 'compromised',
-            cost: idx * 2,
-            noise: idx * 0.15,
-            src_asset_id: idx > 0 ? nodes[idx - 1] : undefined,
-          })),
+          attack_trajectory: nodes.map((nodeId, idx) => {
+            const isLastNode = idx === nodes.length - 1;
+            const stepBlocked = isBlocked && isLastNode && nodes.length > 1;
+            return {
+              step_index: idx + 1,
+              asset_id: nodeId,
+              asset_name: nodeId,
+              zone: idx === 0 ? 'dmz' : (isLastNode ? 'prod' : 'corp'),
+              technique: idx === 0 ? 'ingress' : (stepBlocked ? 'lateral_attempt' : 'lateral_movement'),
+              status: stepBlocked ? 'blocked' : 'compromised',
+              cost: idx * 2 + 1,
+              noise: Number(((idx + 1) * 0.18).toFixed(2)),
+              src_asset_id: idx > 0 ? nodes[idx - 1] : undefined,
+              notes: stepBlocked
+                ? 'BLOCKED: Lateral traversal denied by active security controls'
+                : (idx === 0 ? 'Adversary perimeter ingress' : 'Adversary foothold expanded laterally'),
+            };
+          }),
         };
       }
       return data;
@@ -766,4 +829,131 @@ function getFallbackLineage(twinId: string): LineageOut {
     ],
   };
 }
+
+export function clientNormalizeTwin(payload: any): Twin {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Expected a valid JSON object at root.');
+  }
+
+  const data = (payload.data && typeof payload.data === 'object') ? payload.data :
+               (payload.twin && typeof payload.twin === 'object') ? payload.twin : payload;
+
+  const rawAssets = Array.isArray(data.assets) ? data.assets : (Array.isArray(data.nodes) ? data.nodes : null);
+  if (!rawAssets) {
+    const keys = Object.keys(data).slice(0, 8).join(', ');
+    throw new Error(`Schema mismatch: missing required 'assets' (or 'nodes') array. Keys found: ${keys}`);
+  }
+
+  if (rawAssets.length === 0) {
+    throw new Error("Invalid digital twin: 'assets' array cannot be empty.");
+  }
+
+  const validKinds: ('server' | 'workstation' | 'database' | 'cloud_role' | 'share')[] =
+    ['server', 'workstation', 'database', 'cloud_role', 'share'];
+
+  const normalizedAssets: Asset[] = rawAssets.map((item: any, idx: number) => {
+    if (!item || typeof item !== 'object') {
+      return {
+        id: `asset-${idx + 1}`,
+        name: `Asset ${idx + 1}`,
+        kind: 'server',
+        zone: 'corp',
+        criticality: 2,
+        crown_jewel: false,
+      };
+    }
+
+    const id = String(item.id || item.name || `asset-${idx + 1}`).trim();
+    const name = String(item.name || id);
+
+    let rawKind = String(item.kind || item.type || item.asset_type || 'server').toLowerCase();
+    let kind: 'server' | 'workstation' | 'database' | 'cloud_role' | 'share' = 'server';
+    if (rawKind.includes('data') || rawKind.includes('db') || rawKind.includes('sql') || rawKind.includes('ledger')) {
+      kind = 'database';
+    } else if (rawKind.includes('workstation') || rawKind.includes('pc') || rawKind.includes('laptop') || rawKind.includes('tablet')) {
+      kind = 'workstation';
+    } else if (rawKind.includes('role') || rawKind.includes('iam') || rawKind.includes('cloud')) {
+      kind = 'cloud_role';
+    } else if (rawKind.includes('share') || rawKind.includes('file') || rawKind.includes('storage') || rawKind.includes('s3')) {
+      kind = 'share';
+    }
+
+    let rawZone = String(item.zone || 'corp').toLowerCase();
+    let zone: 'dmz' | 'corp' | 'prod' | 'mgmt' = 'corp';
+    if (rawZone.includes('dmz') || rawZone.includes('public') || rawZone.includes('ext')) {
+      zone = 'dmz';
+    } else if (rawZone.includes('prod') || rawZone.includes('secure') || rawZone.includes('data')) {
+      zone = 'prod';
+    } else if (rawZone.includes('mgmt') || rawZone.includes('admin') || rawZone.includes('jump')) {
+      zone = 'mgmt';
+    }
+
+    let crit = 2;
+    if (typeof item.criticality === 'string') {
+      const c = item.criticality.toLowerCase();
+      crit = c === 'critical' ? 5 : c === 'severe' ? 4 : c === 'high' ? 3 : c === 'low' ? 1 : 2;
+    } else if (typeof item.criticality === 'number') {
+      crit = Math.max(1, Math.min(5, Math.round(item.criticality)));
+    }
+
+    return {
+      id,
+      name,
+      kind,
+      zone,
+      criticality: crit,
+      crown_jewel: Boolean(item.crown_jewel),
+    };
+  });
+
+  const rawEdges = Array.isArray(data.edges) ? data.edges : (Array.isArray(data.relationships) ? data.relationships : (Array.isArray(data.links) ? data.links : []));
+  const normalizedEdges: Edge[] = rawEdges.map((e: any) => ({
+    src: String(e.src || e.source || ''),
+    dst: String(e.dst || e.target || ''),
+    technique: String(e.technique || e.relation_type || e.type || 'network_access'),
+  })).filter((e: Edge) => e.src && e.dst);
+
+  const rawIdentities = Array.isArray(data.identities) ? data.identities : [];
+  const normalizedIdentities: Identity[] = rawIdentities.map((i: any, idx: number) => ({
+    id: String(i.id || `id-${idx + 1}`),
+    name: String(i.name || i.id || `Identity ${idx + 1}`),
+    kind: (['user', 'admin', 'service_account', 'cloud_role'].includes(String(i.kind || i.role || '').toLowerCase())
+      ? String(i.kind || i.role || '').toLowerCase()
+      : 'user') as 'user' | 'admin' | 'service_account' | 'cloud_role',
+    tier: typeof i.tier === 'number' ? Math.max(0, Math.round(i.tier)) : 1,
+  }));
+
+  const rawFlows = Array.isArray(data.flows) ? data.flows : [];
+  const normalizedFlows: ServiceFlow[] = rawFlows.map((f: any, idx: number) => ({
+    id: String(f.id || `F${idx + 1}`),
+    name: String(f.name || `Flow ${f.id || idx + 1}`),
+    src: String(f.src || f.source || ''),
+    dst: String(f.dst || f.target || ''),
+    technique: String(f.technique || 'service_request'),
+    criticality: typeof f.criticality === 'number' ? Math.max(1, Math.min(5, Math.round(f.criticality))) : 3,
+  })).filter((f: ServiceFlow) => f.src && f.dst);
+
+  const rawControls = Array.isArray(data.controls) ? data.controls : [];
+  const normalizedControls: Control[] = rawControls.map((c: any, idx: number) => ({
+    id: String(c.id || `ctrl-${idx + 1}`),
+    name: String(c.name || `Control ${c.id || idx + 1}`),
+    cost: typeof c.cost === 'number' ? Math.max(0, Math.round(c.cost)) : 1000,
+    blocks: Array.isArray(c.blocks) ? c.blocks.map(String) : (typeof c.blocks === 'string' ? [c.blocks] : []),
+    scope: Array.isArray(c.scope) ? c.scope.map(String) : (Array.isArray(c.covered_entities) ? c.covered_entities.map(String) : []),
+    efficacy: typeof c.efficacy === 'number' ? Math.max(0, Math.min(1, c.efficacy)) : 0.9,
+  }));
+
+  const twinId = String(data.id || data.scenario_id || `twin-imported-${Math.random().toString(36).substring(2, 8)}`).trim();
+
+  return {
+    id: twinId,
+    assets: normalizedAssets,
+    identities: normalizedIdentities,
+    edges: normalizedEdges,
+    flows: normalizedFlows,
+    controls: normalizedControls,
+    parent_id: data.parent_id ? String(data.parent_id) : null,
+  };
+}
+
 

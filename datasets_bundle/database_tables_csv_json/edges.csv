@@ -1,0 +1,24 @@
+id,organization_id,source_id,target_id,type,confidence,properties_json,created_at
+edge_0_node-internet_app-ecommerce-api,org-acme-01,node-internet,app-ecommerce-api,CONNECTS_TO,1.0,"{""protocol"": ""TCP""}",2026-09-11 10:57:58.781982
+edge_1_node-internet_rds-postgres-prod,org-acme-01,node-internet,rds-postgres-prod,EXPOSES_PORT_5432,1.0,"{""protocol"": ""TCP""}",2026-09-11 10:57:58.781982
+edge_2_app-ecommerce-api_rds-postgres-prod,org-acme-01,app-ecommerce-api,rds-postgres-prod,CONNECTS_TO,1.0,"{""protocol"": ""TCP""}",2026-09-11 10:57:58.781982
+edge_3_app-ecommerce-api_app-payment-service,org-acme-01,app-ecommerce-api,app-payment-service,INVOKES_API,1.0,"{""protocol"": ""TCP""}",2026-09-11 10:57:58.781982
+edge_4_app-ecommerce-api_srv-k8s-cluster,org-acme-01,app-ecommerce-api,srv-k8s-cluster,DEPLOYED_ON,1.0,"{""protocol"": ""TCP""}",2026-09-11 10:57:58.781982
+edge_5_app-ecommerce-api_s3-product-images,org-acme-01,app-ecommerce-api,s3-product-images,READS_WRITES,1.0,"{""protocol"": ""TCP""}",2026-09-11 10:57:58.781982
+edge_6_rds-postgres-prod_data-customer-pii,org-acme-01,rds-postgres-prod,data-customer-pii,STORES_DATA,1.0,"{""protocol"": ""TCP""}",2026-09-11 10:57:58.781982
+edge_7_rds-postgres-prod_s3-customer-backups,org-acme-01,rds-postgres-prod,s3-customer-backups,BACKS_UP_TO,1.0,"{""protocol"": ""TCP""}",2026-09-11 10:57:58.781982
+edge_8_user-contractor-admin_iam-admin-role,org-acme-01,user-contractor-admin,iam-admin-role,HAS_ROLE,1.0,"{""protocol"": ""TCP""}",2026-09-11 10:57:58.781982
+edge_9_iam-admin-role_cloud-aws-prod,org-acme-01,iam-admin-role,cloud-aws-prod,CONTROLS,1.0,"{""protocol"": ""TCP""}",2026-09-11 10:57:58.781982
+edge_10_user-alex-founder_app-admin-dashboard,org-acme-01,user-alex-founder,app-admin-dashboard,HAS_ACCESS_TO,1.0,"{""protocol"": ""TCP""}",2026-09-11 10:57:58.781982
+edge_11_user-sarah-cto_app-admin-dashboard,org-acme-01,user-sarah-cto,app-admin-dashboard,HAS_ACCESS_TO,1.0,"{""protocol"": ""TCP""}",2026-09-11 10:57:58.781982
+edge_12_saas-analytics-bot_app-ecommerce-api,org-acme-01,saas-analytics-bot,app-ecommerce-api,HAS_API_TOKEN,1.0,"{""protocol"": ""TCP""}",2026-09-11 10:57:58.781982
+edge_13_dns-acme-domain_app-ecommerce-api,org-acme-01,dns-acme-domain,app-ecommerce-api,ROUTES_TRAFFIC_TO,1.0,"{""protocol"": ""TCP""}",2026-09-11 10:57:58.781982
+edge_14_dns-acme-domain_dns-dmarc-record,org-acme-01,dns-acme-domain,dns-dmarc-record,CONTAINS_RECORD,1.0,"{""protocol"": ""TCP""}",2026-09-11 10:57:58.781982
+edge_app_app-ecommerce-api_dep-lodash-4.17.20,org-acme-01,app-ecommerce-api,dep-lodash-4.17.20,DEPENDS_ON,1.0,"{""direct"": true}",2026-09-11 11:03:54.175502
+edge_dep_dep-lodash-4.17.20_vuln-CVE-2021-23337,org-acme-01,dep-lodash-4.17.20,vuln-CVE-2021-23337,CONTAINS,1.0,"{""cvss"": 7.5}",2026-09-11 11:03:54.175502
+edge_app_app-ecommerce-api_dep-jsonwebtoken-8.5.1,org-acme-01,app-ecommerce-api,dep-jsonwebtoken-8.5.1,DEPENDS_ON,1.0,"{""direct"": true}",2026-09-11 11:03:54.175502
+edge_dep_dep-jsonwebtoken-8.5.1_vuln-CVE-2022-23529,org-acme-01,dep-jsonwebtoken-8.5.1,vuln-CVE-2022-23529,CONTAINS,1.0,"{""cvss"": 9.8}",2026-09-11 11:03:54.182426
+edge_app_app-ecommerce-api_dep-express-4.18.2,org-acme-01,app-ecommerce-api,dep-express-4.18.2,DEPENDS_ON,1.0,"{""direct"": true}",2026-09-11 11:03:54.184549
+edge_dep_dep-express-4.18.2_vuln-CVE-2024-43796,org-acme-01,dep-express-4.18.2,vuln-CVE-2024-43796,CONTAINS,1.0,"{""cvss"": 5.3}",2026-09-11 11:03:54.184549
+edge_app_app-ecommerce-api_dep-axios-1.5.0,org-acme-01,app-ecommerce-api,dep-axios-1.5.0,DEPENDS_ON,1.0,"{""direct"": true}",2026-09-11 11:03:54.184549
+edge_dep_dep-axios-1.5.0_vuln-CVE-2023-45857,org-acme-01,dep-axios-1.5.0,vuln-CVE-2023-45857,CONTAINS,1.0,"{""cvss"": 6.5}",2026-09-11 11:03:54.184549

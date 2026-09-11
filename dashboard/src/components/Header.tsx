@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, RotateCcw, SlidersHorizontal, Layers, ShieldCheck } from 'lucide-react';
+import { Shield, RotateCcw, SlidersHorizontal, Layers, ShieldCheck, FileCode2 } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'topology' | 'console' | 'optimizer';
@@ -8,6 +8,10 @@ interface HeaderProps {
   onTogglePresentationMode: (mode: 'story' | 'evidence' | 'chess-audit' | 'lineage') => void;
   isBackendLive: boolean;
   onReset: () => void;
+  currentTwinId?: string;
+  onSelectTwinId?: (twinId: string) => void;
+  onOpenDataStudio?: () => void;
+  customTwinIds?: string[];
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,10 +21,14 @@ export const Header: React.FC<HeaderProps> = ({
   onTogglePresentationMode,
   isBackendLive,
   onReset,
+  currentTwinId = 'twin-finbank-golden',
+  onSelectTwinId,
+  onOpenDataStudio,
+  customTwinIds = [],
 }) => {
   return (
-    <header className="border-b border-canvas-border bg-white sticky top-0 z-50 px-6 py-3 transition-all">
-      <div className="max-w-[1440px] mx-auto flex flex-col xl:flex-row items-center justify-between gap-3">
+    <header className="border-b border-canvas-border bg-white sticky top-0 z-50 px-4 md:px-6 py-2.5 transition-all">
+      <div className="w-full max-w-[1440px] mx-auto flex flex-wrap items-center justify-between gap-3">
         {/* Brand & System Information */}
         <div className="flex items-center gap-3 shrink-0">
           <div className="w-9 h-9 rounded-lg bg-brand-orange text-white flex items-center justify-center shadow-subtle">
@@ -135,8 +143,56 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
         )}
 
-        {/* Engine Status & Reset Trigger */}
-        <div className="flex items-center gap-3">
+        {/* Engine Status, Dataset & Import/Export */}
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          {/* Import / Export JSON Studio Trigger */}
+          {onOpenDataStudio && (
+            <button
+              onClick={onOpenDataStudio}
+              title="Open Digital Twin JSON Data Studio (Import, Export, Copy-Paste, Error Testing)"
+              className="px-3 py-1.5 text-xs rounded-lg bg-brand-orange hover:bg-brand-orange-hover text-white shadow-subtle transition-all active:scale-[0.98] flex items-center gap-1.5 font-bold cursor-pointer shrink-0"
+            >
+              <FileCode2 className="w-4 h-4" />
+              <span>Import / Export JSON</span>
+            </button>
+          )}
+
+          {/* Scenario / Dataset Selector */}
+          {onSelectTwinId && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-ash-100 border border-ash-200 text-xs shadow-subtle">
+              <span className="text-[10px] font-mono font-bold text-ash-500 uppercase tracking-wider hidden md:inline">Dataset:</span>
+              <select
+                value={currentTwinId}
+                onChange={(e) => onSelectTwinId(e.target.value)}
+                className="bg-white border border-ash-200 text-ash-800 font-semibold rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-orange cursor-pointer shadow-xs"
+              >
+                <optgroup label="Default Benchmarks">
+                  <option value="twin-finbank-golden">🏦 FinBank Core (Baseline)</option>
+                  <option value="twin-cloudapp-easy">☁️ CloudApp MicroSaaS (Easy)</option>
+                  <option value="twin-neobank-medium">💳 Neobank Payments (Medium)</option>
+                  <option value="twin-globalbank-hard">🌐 GlobalBank Enterprise (Hard)</option>
+                  <option value="twin-medicare-hospital">🏥 Medicare Hospital (Custom)</option>
+                </optgroup>
+                {customTwinIds && customTwinIds.length > 0 && (
+                  <optgroup label="Imported Custom Scenarios">
+                    {customTwinIds.map((id) => (
+                      <option key={id} value={id}>
+                        ⚡ {id}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {/* Ensure currentTwinId is visible if custom and not yet in list */}
+                {currentTwinId &&
+                  !['twin-finbank-golden', 'twin-cloudapp-easy', 'twin-neobank-medium', 'twin-globalbank-hard', 'twin-medicare-hospital', ...(customTwinIds || [])].includes(currentTwinId) && (
+                    <optgroup label="Active Custom Twin">
+                      <option value={currentTwinId}>⚡ {currentTwinId}</option>
+                    </optgroup>
+                  )}
+              </select>
+            </div>
+          )}
+
           <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-ash-100 border border-ash-200 text-xs font-mono">
             <span className="relative flex h-2 w-2">
               <span

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import {
   Asset,
+  Edge,
   Control,
   CrawlAuditResult,
   NodeAudit,
@@ -37,7 +38,9 @@ import { GOLDEN_ASSETS, GOLDEN_EDGES, GOLDEN_FLOWS } from '../data/topologyData'
 
 interface ChessPieceAuditorViewProps {
   assets: Asset[];
+  edges?: Edge[];
   controls: Control[];
+  twinId?: string;
   onBackToDecisionStory?: () => void;
 }
 
@@ -66,7 +69,9 @@ const NODE_COORDINATES: Record<string, { x: number; y: number }> = {
 
 export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
   assets = GOLDEN_ASSETS,
+  edges = GOLDEN_EDGES,
   controls,
+  twinId = 'twin-finbank-golden',
   onBackToDecisionStory,
 }) => {
   // Crawl configuration state
@@ -74,6 +79,35 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
   const [targetNode, setTargetNode] = useState<string>('prod-db');
   const [maxHops, setMaxHops] = useState<number>(8);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // Dynamic coordinate calculator for any scenario topology
+  const getNodeCoords = (nodeId: string): { x: number; y: number } => {
+    if (NODE_COORDINATES[nodeId]) return NODE_COORDINATES[nodeId];
+    const asset = assets.find((a) => a.id === nodeId);
+    if (!asset) return { x: 50, y: 50 };
+    const zoneXMap: Record<string, number> = { dmz: 12, corp: 38, mgmt: 64, prod: 88 };
+    const zoneAssets = assets.filter((a) => a.zone === asset.zone);
+    const idx = zoneAssets.findIndex((a) => a.id === asset.id);
+    const count = zoneAssets.length;
+    const x = zoneXMap[asset.zone] || 50;
+    const y = count <= 1 ? 50 : 20 + (idx / Math.max(1, count - 1)) * 65;
+    return { x, y };
+  };
+
+  // Sync start and target nodes when dataset assets change
+  useEffect(() => {
+    if (assets.length > 0) {
+      const dmzAsset = assets.find((a) => a.zone === 'dmz') || assets[0];
+      const crownJewel = assets.find((a) => a.crown_jewel) || assets.find((a) => a.zone === 'prod') || assets[assets.length - 1];
+      const validStart = assets.some((a) => a.id === startNode) ? startNode : dmzAsset.id;
+      const validTarget = assets.some((a) => a.id === targetNode) ? targetNode : crownJewel.id;
+
+      setStartNode(validStart);
+      setTargetNode(validTarget);
+      setCurrentNodeId(validStart);
+      setVisitedNodes([validStart]);
+    }
+  }, [assets, twinId]);
 
   // Crawl results state
   const [auditResult, setAuditResult] = useState<CrawlAuditResult | null>(null);
@@ -94,6 +128,7 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
     setIsPlaying(false);
     try {
       const res = await apiClient.crawlAudit({
+        twin_id: twinId,
         start_node: startNode,
         target_node: targetNode,
         max_depth: maxHops,
@@ -112,10 +147,10 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
     }
   };
 
-  // Initial load
+  // Run crawl when start, target or twinId changes
   useEffect(() => {
     handleRunCrawl();
-  }, []);
+  }, [startNode, targetNode, twinId]);
 
   const activePath = auditResult?.paths[selectedPathIndex] || null;
 
@@ -155,8 +190,8 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
 
   // Outgoing moves from current node (all outgoing edges from topology)
   const outgoingBranchMoves = useMemo(() => {
-    return GOLDEN_EDGES.filter((e) => e.src === currentNodeId);
-  }, [currentNodeId]);
+    return edges.filter((e) => e.src === currentNodeId);
+  }, [currentNodeId, edges]);
 
   // Filtered vulnerabilities for active node
   const filteredVulnerabilities = useMemo(() => {
@@ -445,9 +480,9 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
               </defs>
 
               {/* Baseline Background Edges */}
-              {GOLDEN_EDGES.map((edge, idx) => {
-                const srcCoords = NODE_COORDINATES[edge.src];
-                const dstCoords = NODE_COORDINATES[edge.dst];
+              {edges.map((edge, idx) => {
+                const srcCoords = getNodeCoords(edge.src);
+                const dstCoords = getNodeCoords(edge.dst);
                 if (!srcCoords || !dstCoords) return null;
 
                 const isCurrentOutgoing = edge.src === currentNodeId;
@@ -479,8 +514,8 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
 
               {/* Dynamic Branching Moves Layer (Outgoing from Current Position) */}
               {outgoingBranchMoves.map((edge, idx) => {
-                const srcCoords = NODE_COORDINATES[edge.src];
-                const dstCoords = NODE_COORDINATES[edge.dst];
+                const srcCoords = getNodeCoords(edge.src);
+                const dstCoords = getNodeCoords(edge.dst);
                 if (!srcCoords || !dstCoords) return null;
 
                 const isPrimary = idx === 0; // Primary candidate move
@@ -520,7 +555,7 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
 
             {/* Interactive Nodes Layer */}
             {assets.map((asset) => {
-              const coords = NODE_COORDINATES[asset.id];
+              const coords = getNodeCoords(asset.id);
               if (!coords) return null;
 
               const isCurrent = asset.id === currentNodeId;

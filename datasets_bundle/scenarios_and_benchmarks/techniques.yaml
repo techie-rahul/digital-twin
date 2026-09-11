@@ -1,0 +1,122 @@
+# MITRE ATT&CK Enterprise Technique Catalog (Final v2.1)
+# Bounded 10-technique catalog supporting threat vector assessments in digital twin environments.
+
+- id: "phish"
+  attck: "T1566"
+  protocol: "https"
+  port: 443
+  requires: []
+  grants:
+    - "foothold"
+    - "creds:user"
+  base_success: 0.7
+  cost: 1.0
+  noise: 0.2
+
+- id: "exploit_public_app"
+  attck: "T1190"
+  protocol: "https"
+  port: 443
+  requires: []
+  grants:
+    - "foothold"
+  base_success: 0.6
+  cost: 3.0
+  noise: 0.5
+
+- id: "cred_dump"
+  attck: "T1003"
+  protocol: null
+  port: null
+  requires:
+    - "priv:admin"
+    - "creds:sessions@src"
+  grants:
+    - "creds:dumped"
+  base_success: 0.8
+  cost: 2.0
+  noise: 0.7
+
+- id: "priv_esc_local"
+  attck: "T1068"
+  protocol: null
+  port: null
+  requires:
+    - "foothold"
+  grants:
+    - "priv:admin"
+  base_success: 0.65
+  cost: 2.0
+  noise: 0.4
+
+- id: "creds_in_files"
+  attck: "T1552.001"
+  protocol: null
+  port: null
+  requires:
+    - "foothold"
+  grants:
+    - "creds:who"
+  base_success: 0.75
+  cost: 1.0
+  noise: 0.1
+
+- id: "rdp_lateral"
+  attck: "T1021.001"
+  protocol: "rdp"
+  port: 3389
+  requires:
+    - "creds:who"
+  grants:
+    - "session:admin"
+  base_success: 0.9
+  cost: 2.0
+  noise: 0.3
+
+- id: "ssh_lateral"
+  attck: "T1021.004"
+  protocol: "ssh"
+  port: 22
+  requires:
+    - "creds:who"
+  grants:
+    - "session:user"
+  base_success: 0.9
+  cost: 2.0
+  noise: 0.2
+
+- id: "smb_lateral"
+  attck: "T1021.002"
+  protocol: "smb"
+  port: 445
+  requires:
+    - "creds:who"
+  grants:
+    - "access:share"
+  base_success: 0.85
+  cost: 2.0
+  noise: 0.4
+
+- id: "db_login"
+  attck: "T1078"
+  protocol: "sql"
+  port: 5432
+  requires:
+    - "creds:who"
+  grants:
+    - "session:db"
+  base_success: 0.95
+  cost: 1.0
+  noise: 0.2
+
+- id: "exfil_c2"
+  attck: "T1041"
+  protocol: "https"
+  port: 443
+  requires:
+    - "foothold"
+  grants:
+    - "exfiltrated"
+  base_success: 0.8
+  cost: 2.0
+  noise: 0.6
