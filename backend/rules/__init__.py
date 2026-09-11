@@ -1,5 +1,5 @@
 """Rules, techniques, channel projection, and compilation package."""
-
+import backend.core  # Break circular import dependency before compile and search initialize
 from backend.rules.loader import (
     TechniqueDefinition,
     load_techniques,
@@ -17,6 +17,15 @@ from backend.rules.compile import (
     matches,
     selector_matches,
 )
+from backend.rules.evaluate import (
+    ChangeVerdict,
+    Confidence,
+    FlowBreakageDetail,
+    detect_broken_flows,
+    compute_confidence,
+    evaluate_change,
+    EXACT_MFA_SERVICE_IDENTITY_MSG,
+)
 
 __all__ = [
     "TechniqueDefinition",
@@ -32,4 +41,12 @@ __all__ = [
     "to_channel",
     "matches",
     "selector_matches",
+    "ChangeVerdict",
+    "Confidence",
+    "FlowBreakageDetail",
+    "detect_broken_flows",
+    "compute_confidence",
+    "evaluate_change",
+    "EXACT_MFA_SERVICE_IDENTITY_MSG",
 ]
+
