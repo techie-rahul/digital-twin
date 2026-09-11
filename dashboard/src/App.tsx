@@ -241,6 +241,7 @@ export const App: React.FC = () => {
         {activeTab === 'topology' && (
           <TopologyCanvas
             assets={twin.assets}
+            edges={twin.edges}
             flows={twin.flows}
             compromisedNodeIds={compromisedNodeIds}
             simulationSteps={simulationSteps}
