@@ -18,6 +18,15 @@ from backend.core.twin import (
     clone,
 )
 
+from backend.core.search import (
+    search,
+    Inventory,
+    AttackPath,
+    SearchBudgetExceeded,
+    SearchCache,
+    GLOBAL_SEARCH_CACHE,
+)
+
 __all__ = [
     "Asset",
     "Identity",
@@ -32,5 +41,12 @@ __all__ = [
     "compute_twin_hash",
     "canonical_twin_dict",
     "clone",
+    "search",
+    "Inventory",
+    "AttackPath",
+    "SearchBudgetExceeded",
+    "SearchCache",
+    "GLOBAL_SEARCH_CACHE",
 ]
+
 

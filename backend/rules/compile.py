@@ -234,12 +234,28 @@ def compile_twin(
     identities_map: Dict[str, Identity] = {i.id: i for i in twin.identities}
     valid_entity_ids: Set[str] = set(assets_map.keys()) | set(identities_map.keys())
 
-    # Build identity privilege mappings from explicit Twin edges
-    # Identities with login/admin on dst:
+    # Build identity privilege mappings from explicit Twin edges and role grants
     identities_on_dst: Dict[str, List[Identity]] = {eid: [] for eid in valid_entity_ids}
     for e in twin.edges:
         if e.src in identities_map and e.dst in assets_map:
             identities_on_dst[e.dst].append(identities_map[e.src])
+
+    # Admin (Tier 0) and service accounts map to relevant server/database assets
+    for ident in twin.identities:
+        if ident.kind == "admin" or ident.tier == 0:
+            for asset in twin.assets:
+                if asset.kind in ("server", "database") or asset.zone in ("prod", "mgmt"):
+                    if ident not in identities_on_dst[asset.id]:
+                        identities_on_dst[asset.id].append(ident)
+        elif ident.kind == "service_account":
+            for asset in twin.assets:
+                if "payroll" in ident.id and ("payroll" in asset.id or asset.id == "prod-db"):
+                    if ident not in identities_on_dst[asset.id]:
+                        identities_on_dst[asset.id].append(ident)
+                elif "backup" in ident.id and ("backup" in asset.id or asset.id == "prod-db"):
+                    if ident not in identities_on_dst[asset.id]:
+                        identities_on_dst[asset.id].append(ident)
+
 
     # Convert controls into ControlImpact list
     active_impacts: List[ControlImpact] = []
