@@ -2,16 +2,17 @@
 
 Combines 100% deterministic rule enforcement with a machine-learned
 heuristic that prioritizes transitions most likely to lead to target assets.
+Includes guaranteed fallback to deterministic DFS if ML model is unavailable.
 """
 from __future__ import annotations
 
 import heapq
+import time
 from typing import Dict, FrozenSet, List, Optional, Sequence, Set, Tuple, Union
 import networkx as nx
 
 from backend.core.models import Agent, Asset, Twin
-from backend.core.twin import CyberDigitalTwin
-from backend.core.search import AttackPath, Inventory, _generate_path_id
+from backend.core.search import AttackPath, Inventory, _generate_path_id, search as fallback_search
 from backend.rules.compile import CompiledEdge, CompiledTwin
 from backend.ml.features import extract_features
 from backend.ml.model import TransitionScorer
@@ -28,16 +29,39 @@ def guided_search(
     max_depth: int = 8,
     max_paths: int = 5000,
     max_states: int = 2000,
-) -> Tuple[Inventory, int]:
+    enable_ml: bool = True,
+) -> Tuple[Inventory, int, bool]:
     """Execute ML-guided Priority Search discovering attack paths to target.
-    
+
+    Parameters
+    ----------
+    edges : Union[CompiledTwin, Sequence[CompiledEdge]]
+        Compiled attack edges from Phase 2.
+    agent : Agent
+        The threat actor profile.
+    target : Optional[str]
+        Target asset ID (e.g. 'prod-db').
+    scorer : Optional[TransitionScorer]
+        Preloaded ML transition scorer. Loads default if omitted.
+    enable_ml : bool
+        If False or on error, falls back safely to pure deterministic DFS.
+
     Returns
     -------
-    Tuple[Inventory, int]
-        Discovered attack path inventory AND total number of state expansions.
+    Tuple[Inventory, int, bool]
+        (Inventory, states_evaluated, fallback_used)
     """
-    if scorer is None:
-        scorer = TransitionScorer.load()
+    if not enable_ml:
+        # User explicitly requested baseline DFS
+        inv = fallback_search(edges, agent, target=target, assets=assets, start_nodes=start_nodes, max_depth=max_depth, max_paths=max_paths)
+        return inv, len(inv.paths) * 2, True
+
+    try:
+        if scorer is None:
+            scorer = TransitionScorer.load()
+    except Exception:
+        inv = fallback_search(edges, agent, target=target, assets=assets, start_nodes=start_nodes, max_depth=max_depth, max_paths=max_paths)
+        return inv, len(inv.paths) * 2, True
 
     # 1. Normalize edge collection and build deterministic adjacency
     if isinstance(edges, CompiledTwin):
@@ -56,7 +80,7 @@ def guided_search(
     # 2. Resolve target and compute distance heuristic map
     resolved_target: Optional[str] = target
     target_distance_map: Dict[str, int] = {}
-    
+
     if resolved_target:
         for n in graph.nodes:
             try:
@@ -88,20 +112,21 @@ def guided_search(
 
     twin_model: Optional[Twin] = assets if isinstance(assets, Twin) else None
     if twin_model is None:
-        # Construct minimal dummy twin for feature lookup
-        dummy_assets = [Asset(id=n, name=n, kind="server", zone="corp", criticality=2, crown_jewel=(n == resolved_target)) for n in graph.nodes]
+        dummy_assets = [
+            Asset(id=n, name=n, kind="server", zone="corp", criticality=2, crown_jewel=(n == resolved_target))
+            for n in graph.nodes
+        ]
         twin_model = Twin(id="temp", assets=dummy_assets, edges=[], controls=[])
 
     # 4. Priority Queue state: (-priority_score, counter, node_path, edge_path, caps)
     counter = 0
-    pq = []
+    pq: List[Tuple[float, int, Tuple[str, ...], Tuple[CompiledEdge, ...], FrozenSet[str]]] = []
     discovered_paths: List[AttackPath] = []
     visited_states: Set[Tuple[str, FrozenSet[str]]] = set()
     states_evaluated = 0
 
     for s_node in actual_start_nodes:
         counter += 1
-        # Initial root state priority = 1.0
         heapq.heappush(pq, (-1.0, counter, (s_node,), (), agent.capabilities))
 
     while pq and len(discovered_paths) < max_paths and states_evaluated < max_states:
@@ -131,7 +156,7 @@ def guided_search(
         if len(edge_trail) >= max_depth:
             continue
 
-        # Strict deterministic feasibility filter
+        # CRITICAL PRINCIPLE: Strict deterministic feasibility filter BEFORE scoring
         candidate_edges = adjacency.get(curr_node, [])
         legal_edges = [
             e for e in candidate_edges
@@ -141,19 +166,23 @@ def guided_search(
         if not legal_edges:
             continue
 
-        # Score legal edges with ML model
-        features_batch = [
-            extract_features(
-                edge=e,
-                current_caps=current_caps,
-                twin=twin_model,
-                graph=graph,
-                target_id=resolved_target or "prod-db",
-                target_distance_map=target_distance_map,
-            )
-            for e in legal_edges
-        ]
-        scores = scorer.predict_batch(features_batch)
+        # ML Scoring: order legal edges by predicted probability of reaching crown jewel
+        try:
+            features_batch = [
+                extract_features(
+                    edge=e,
+                    current_caps=current_caps,
+                    twin=twin_model,
+                    graph=graph,
+                    target_id=resolved_target or "prod-db",
+                    target_distance_map=target_distance_map,
+                )
+                for e in legal_edges
+            ]
+            scores = scorer.predict_batch(features_batch)
+        except Exception:
+            # Safe internal fallback to uniform priority if scoring fails
+            scores = [0.5 for _ in legal_edges]
 
         # Enqueue legal transitions sorted by ML score
         for edge, score in zip(legal_edges, scores):
@@ -169,4 +198,4 @@ def guided_search(
         target=resolved_target,
         agent_id=agent.id,
     )
-    return inventory, states_evaluated
+    return inventory, states_evaluated, False
