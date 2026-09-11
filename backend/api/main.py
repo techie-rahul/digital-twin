@@ -137,6 +137,13 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(router)
+
+    # Mount compiled production frontend if dist directory exists
+    from fastapi.staticfiles import StaticFiles
+    dist_dir = Path(__file__).parent.parent.parent / "dashboard" / "dist"
+    if dist_dir.is_dir():
+        app.mount("/", StaticFiles(directory=str(dist_dir), html=True), name="frontend")
+
     return app
 
 

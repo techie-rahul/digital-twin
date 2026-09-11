@@ -126,6 +126,7 @@ def _twin_to_out(dt: CyberDigitalTwin) -> TwinOut:
 # ─────────────────────────────────────────────
 
 @router.get("/", response_model=HealthOut, tags=["Health"])
+@router.get("/health", response_model=HealthOut, tags=["Health"])
 def health(request: Request) -> HealthOut:
     """Health check — confirms the server is alive and reports the loaded golden twin."""
     registry: Dict[str, CyberDigitalTwin] = request.app.state.twin_registry

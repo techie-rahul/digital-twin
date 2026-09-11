@@ -22,13 +22,46 @@ export const apiClient = {
     control_ids?: string[];
   }): Promise<SimulateResponse> {
     try {
+      const payload = {
+        twin_id: params.twin_id || 'twin-finbank-golden',
+        agent_id: params.agent_id || 'agent-external',
+        n: params.n_walks || 100,
+        seed: params.seed || 42,
+        control_ids: params.control_ids || [],
+      };
       const res = await fetch(`${API_BASE}/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-      return await res.json();
+      const data = await res.json();
+      if (data.candidate_routes && Array.isArray(data.candidate_routes)) {
+        const topRoute = data.candidate_routes[0];
+        const nodes: string[] = topRoute ? topRoute.nodes : [];
+        return {
+          twin_id: data.twin_id,
+          agent_id: data.agent_id,
+          p_success: data.p_success,
+          mean_effort: data.mean_effort ?? 0,
+          p90_effort: null,
+          compromised_nodes: nodes,
+          choke_points: {},
+          exemplar_paths: topRoute ? [topRoute.nodes] : [],
+          attack_trajectory: nodes.map((nodeId, idx) => ({
+            step_index: idx + 1,
+            asset_id: nodeId,
+            asset_name: nodeId,
+            zone: 'corp',
+            technique: 'lateral_movement',
+            status: 'compromised',
+            cost: idx * 2,
+            noise: idx * 0.15,
+            src_asset_id: idx > 0 ? nodes[idx - 1] : undefined,
+          })),
+        };
+      }
+      return data;
     } catch (e) {
       console.warn('Falling back to local simulate mock:', e);
       return getFallbackSimulate(params.control_ids || []);
@@ -43,13 +76,31 @@ export const apiClient = {
     n_walks?: number;
   }): Promise<ChangeVerdict> {
     try {
+      const payload = {
+        twin_id: params.twin_id || 'twin-finbank-golden',
+        control_ids: params.control_ids || [],
+        agent_ids: [params.agent_id || 'agent-external'],
+        seed: params.seed || 42,
+        n: params.n_walks || 100,
+      };
       const res = await fetch(`${API_BASE}/evaluate-change`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-      return await res.json();
+      const data = await res.json();
+      if (!data.broken_flows && data.broken_flow_details) {
+        data.broken_flows = data.broken_flow_details.map((f: any) => ({
+          id: f.flow_id,
+          name: f.flow_name,
+          src: f.src,
+          dst: f.dst,
+          technique: f.technique,
+          criticality: f.criticality,
+        }));
+      }
+      return data;
     } catch (e) {
       console.warn('Falling back to local evaluate change mock:', e);
       return getFallbackVerdict(params.control_ids);
@@ -117,12 +168,16 @@ function getFallbackTwin(): Twin {
     edges: [
       { src: "internet", dst: "web-dmz", technique: "exploit_public_app" },
       { src: "web-dmz", dst: "payroll-api", technique: "db_login" },
-      { src: "payroll-api", dst: "prod-db", technique: "db_login" },
+      { src: "web-dmz", dst: "jump-01", technique: "ssh_lateral" },
+      { src: "ws-dev", dst: "fileshare", technique: "smb_lateral" },
       { src: "ws-dev", dst: "ci-runner", technique: "ssh_lateral" },
+      { src: "ws-dev", dst: "jump-01", technique: "rdp_lateral" },
+      { src: "ws-hr", dst: "fileshare", technique: "smb_lateral" },
+      { src: "fileshare", dst: "ws-dev", technique: "smb_lateral" },
       { src: "ci-runner", dst: "jump-01", technique: "ssh_lateral" },
       { src: "jump-01", dst: "prod-db", technique: "rdp_lateral" },
-      { src: "jump-01", dst: "backup-01", technique: "ssh_lateral" },
-      { src: "ws-hr", dst: "fileshare", technique: "smb_lateral" },
+      { src: "jump-01", dst: "backup-01", technique: "rdp_lateral" },
+      { src: "payroll-api", dst: "prod-db", technique: "db_login" },
     ],
     flows: [
       { id: "F1", name: "Customer Web Banking Traffic", src: "internet", dst: "web-dmz", technique: "exploit_public_app", criticality: 3 },
@@ -130,13 +185,13 @@ function getFallbackTwin(): Twin {
       { id: "F3", name: "Payroll Transaction Ledger Commits", src: "payroll-api", dst: "prod-db", technique: "db_login", criticality: 5 },
       { id: "F4", name: "Developer CI Build Artifact Push", src: "ws-dev", dst: "ci-runner", technique: "ssh_lateral", criticality: 3 },
       { id: "F5", name: "HR Document Archival Sync", src: "ws-hr", dst: "fileshare", technique: "smb_lateral", criticality: 3 },
-      { id: "F6", name: "Nightly Cloud Disaster Recovery Backup", src: "jump-01", dst: "backup-01", technique: "ssh_lateral", criticality: 4 },
+      { id: "F6", name: "Nightly Cloud Disaster Recovery Backup", src: "jump-01", dst: "backup-01", technique: "rdp_lateral", criticality: 4 },
     ],
     controls: [
-      { id: "ctrl-network-seg", name: "Core Banking Subnet Segmentation", cost: 2500, blocks: ["db_login", "ssh_lateral"], scope: ["prod-db", "backup-01"], efficacy: 0.95 },
-      { id: "ctrl-mfa", name: "Privileged Access Multi-Factor Authentication", cost: 1500, blocks: ["ssh_lateral", "rdp_lateral"], scope: ["jump-01", "payroll-api"], efficacy: 0.85 },
-      { id: "ctrl-edr", name: "Host Endpoint Detection and Response", cost: 2000, blocks: ["exploit_public_app", "cred_dump"], scope: ["ws-dev", "ws-hr", "ci-runner"], efficacy: 0.80 },
-      { id: "ctrl-credguard", name: "Windows Credential Guard Protection", cost: 1000, blocks: ["cred_dump", "creds_in_files"], scope: ["ws-dev", "jump-01"], efficacy: 0.90 },
+      { id: "ctrl-network-seg", name: "Core Banking Subnet Segmentation", cost: 2500, blocks: ["network_segmentation", "db_login", "ssh_lateral", "rdp_lateral", "smb_lateral", "exploit_public_app"], scope: ["prod-db", "backup-01"], efficacy: 0.95 },
+      { id: "ctrl-mfa", name: "Privileged Access Multi-Factor Authentication", cost: 1500, blocks: ["mfa", "ssh_lateral", "rdp_lateral", "db_login"], scope: ["jump-01", "payroll-api"], efficacy: 0.85 },
+      { id: "ctrl-edr", name: "Host Endpoint Detection and Response", cost: 2000, blocks: ["edr", "exploit_public_app", "cred_dump"], scope: ["ws-dev", "ws-hr", "ci-runner"], efficacy: 0.80 },
+      { id: "ctrl-credguard", name: "Windows Credential Guard Protection", cost: 1000, blocks: ["credential_guard", "cred_dump", "creds_in_files"], scope: ["ws-dev", "jump-01"], efficacy: 0.90 },
     ],
   };
 }
@@ -154,13 +209,34 @@ function getFallbackSimulate(controlIds: string[]): SimulateResponse {
       p90_effort: 32.0,
       compromised_nodes: ["ws-dev", "ci-runner", "jump-01"],
       attack_trajectory: [
-        { step_index: 1, asset_id: "ws-dev", asset_name: "Developer Workstation", zone: "corp", technique: "phish", status: "compromised", cost: 2, noise: 0.1 },
-        { step_index: 2, asset_id: "ci-runner", asset_name: "Internal CI Build Agent", zone: "corp", technique: "ssh_lateral", status: "compromised", cost: 4, noise: 0.25 },
-        { step_index: 3, asset_id: "jump-01", asset_name: "Privileged Admin Jumpbox", zone: "mgmt", technique: "ssh_lateral", status: "compromised", cost: 6, noise: 0.4 },
-        { step_index: 4, asset_id: "prod-db", asset_name: "Core Banking Ledger Database", zone: "prod", technique: "db_login", status: "blocked", cost: 10, noise: 0.8 },
+        { step_index: 1, asset_id: "ws-dev", asset_name: "Developer Workstation", zone: "corp", technique: "phish", status: "compromised", cost: 2, noise: 0.1, notes: "Initial foothold via spear-phishing credential harvesting" },
+        { step_index: 2, asset_id: "ci-runner", asset_name: "Internal CI Build Agent", zone: "corp", technique: "ssh_lateral", status: "compromised", cost: 4, noise: 0.25, src_asset_id: "ws-dev", notes: "Lateral pivot via SSH developer build agent keys" },
+        { step_index: 3, asset_id: "jump-01", asset_name: "Privileged Admin Jumpbox", zone: "mgmt", technique: "ssh_lateral", status: "compromised", cost: 6, noise: 0.4, src_asset_id: "ci-runner", notes: "Tier-0 management jumpbox compromised" },
+        { step_index: 4, asset_id: "prod-db", asset_name: "Core Banking Ledger Database", zone: "prod", technique: "rdp_lateral", status: "blocked", cost: 10, noise: 0.8, src_asset_id: "jump-01", notes: "BLOCKED BY NETWORK SEGMENTATION: Ingress policy blocked lateral movement to Core Database" },
+        { step_index: 5, asset_id: "backup-01", asset_name: "Disaster Recovery Storage Vault", zone: "mgmt", technique: "rdp_lateral", status: "blocked", cost: 14, noise: 0.95, src_asset_id: "jump-01", is_pivot: true, notes: "ATTACKER PIVOT: Adversary re-plans to alternate Tier-0 target backup-01, blocked by Network Segmentation" },
       ],
-      choke_points: { "ci-runner->jump-01": 0.85, "jump-01->prod-db": 0.12 },
-      exemplar_paths: [["ws-dev", "ci-runner", "jump-01", "prod-db"]],
+      choke_points: { "ci-runner->jump-01": 0.85, "jump-01->prod-db": 0.12, "jump-01->backup-01": 0.08 },
+      exemplar_paths: [["ws-dev", "ci-runner", "jump-01", "prod-db"], ["ws-dev", "ci-runner", "jump-01", "backup-01"]],
+    };
+  }
+
+  if (hasMfa) {
+    return {
+      twin_id: "twin-finbank-golden",
+      agent_id: "adv-admin",
+      p_success: 0.14,
+      mean_effort: 21.0,
+      p90_effort: 28.5,
+      compromised_nodes: ["ws-dev", "fileshare", "ci-runner"],
+      attack_trajectory: [
+        { step_index: 1, asset_id: "ws-dev", asset_name: "Developer Workstation", zone: "corp", technique: "phish", status: "compromised", cost: 2, noise: 0.1, notes: "Initial foothold via spear-phishing" },
+        { step_index: 2, asset_id: "jump-01", asset_name: "Privileged Admin Jumpbox", zone: "mgmt", technique: "rdp_lateral", status: "blocked", cost: 5, noise: 0.35, src_asset_id: "ws-dev", notes: "BLOCKED BY MFA: Hardware token requirement blocked direct RDP bastion transition" },
+        { step_index: 3, asset_id: "fileshare", asset_name: "Corporate File Repository", zone: "corp", technique: "smb_lateral", status: "compromised", cost: 8, noise: 0.5, src_asset_id: "ws-dev", is_pivot: true, notes: "ATTACKER PIVOT: Adversary branches into corporate fileshare to scavenge unmanaged credentials" },
+        { step_index: 4, asset_id: "ci-runner", asset_name: "Internal CI Build Agent", zone: "corp", technique: "ssh_lateral", status: "compromised", cost: 11, noise: 0.65, src_asset_id: "ws-dev", notes: "Adversary compromises CI runner attempting secondary bastion breach" },
+        { step_index: 5, asset_id: "jump-01", asset_name: "Privileged Admin Jumpbox", zone: "mgmt", technique: "ssh_lateral", status: "blocked", cost: 16, noise: 0.85, src_asset_id: "ci-runner", notes: "BLOCKED BY MFA: Secondary bastion SSH breach thwarted by MFA challenge" },
+      ],
+      choke_points: { "ws-dev->jump-01": 0.14, "ci-runner->jump-01": 0.12 },
+      exemplar_paths: [["ws-dev", "fileshare", "ci-runner", "jump-01"]],
     };
   }
 
@@ -172,10 +248,10 @@ function getFallbackSimulate(controlIds: string[]): SimulateResponse {
     p90_effort: 11.0,
     compromised_nodes: ["ws-dev", "ci-runner", "jump-01", "prod-db"],
     attack_trajectory: [
-      { step_index: 1, asset_id: "ws-dev", asset_name: "Developer Workstation", zone: "corp", technique: "phish", status: "compromised", cost: 2, noise: 0.1 },
-      { step_index: 2, asset_id: "ci-runner", asset_name: "Internal CI Build Agent", zone: "corp", technique: "ssh_lateral", status: "compromised", cost: 4, noise: 0.25 },
-      { step_index: 3, asset_id: "jump-01", asset_name: "Privileged Admin Jumpbox", zone: "mgmt", technique: "ssh_lateral", status: "compromised", cost: 6, noise: 0.4 },
-      { step_index: 4, asset_id: "prod-db", asset_name: "Core Banking Ledger Database", zone: "prod", technique: "rdp_lateral", status: "compromised", cost: 9, noise: 0.65 },
+      { step_index: 1, asset_id: "ws-dev", asset_name: "Developer Workstation", zone: "corp", technique: "phish", status: "compromised", cost: 2, noise: 0.1, notes: "Initial foothold established via spear-phishing" },
+      { step_index: 2, asset_id: "ci-runner", asset_name: "Internal CI Build Agent", zone: "corp", technique: "ssh_lateral", status: "compromised", cost: 4, noise: 0.25, src_asset_id: "ws-dev", notes: "Lateral pivot via SSH credentials discovered in bash history" },
+      { step_index: 3, asset_id: "jump-01", asset_name: "Privileged Admin Jumpbox", zone: "mgmt", technique: "ssh_lateral", status: "compromised", cost: 6, noise: 0.4, src_asset_id: "ci-runner", notes: "Tier-0 management bastion host compromised" },
+      { step_index: 4, asset_id: "prod-db", asset_name: "Core Banking Ledger Database", zone: "prod", technique: "rdp_lateral", status: "compromised", cost: 9, noise: 0.65, src_asset_id: "jump-01", notes: "CRITICAL BREACH: Adversary achieves full database administrator compromise via unrestricted RDP" },
     ],
     choke_points: { "ci-runner->jump-01": 0.85, "jump-01->prod-db": 0.82 },
     exemplar_paths: [["ws-dev", "ci-runner", "jump-01", "prod-db"]],

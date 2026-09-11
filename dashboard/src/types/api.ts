@@ -60,6 +60,9 @@ export interface SimulationStep {
   status: 'targeted' | 'compromised' | 'blocked';
   cost: number;
   noise: number;
+  src_asset_id?: string;
+  is_pivot?: boolean;
+  notes?: string;
 }
 
 export interface SimulateResponse {
