@@ -13,12 +13,16 @@ from backend.rules.compile import compile_twin
 from backend.ml.guided_search import guided_search
 
 SCENARIOS = [
-    ("FinBank Golden Banking", "backend/data/scenarios/golden.json"),
+    ("FinBank Golden Banking (Base)", "backend/data/scenarios/golden.json"),
+    ("CloudApp Web Monolith (Easy)", "backend/data/scenarios/twin-cloudapp-easy.json"),
+    ("NeoBank Fintech SRE (Medium)", "backend/data/scenarios/twin-neobank-medium.json"),
+    ("GlobalBank Tier-0 Enterprise (Hard)", "backend/data/scenarios/twin-globalbank-hard.json"),
     ("Healthcare & Hospital Clinical", "backend/data/scenarios/twin-healthcare-hospital.json"),
     ("Cloud E-Commerce & Retail", "backend/data/scenarios/twin-ecommerce-cloud.json"),
     ("Industrial SCADA & Substation", "backend/data/scenarios/twin-industrial-scada.json"),
     ("Enterprise SaaS & Active Directory", "backend/data/scenarios/twin-enterprise-saas.json"),
 ]
+
 
 
 def run_benchmark():

@@ -1,0 +1,149 @@
+{
+  "id": "twin-cloudapp-easy",
+  "assets": [
+    {
+      "id": "cdn-gw",
+      "name": "Cloud CDN & Edge Ingress",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 1,
+      "crown_jewel": false
+    },
+    {
+      "id": "app-server",
+      "name": "Monolithic Web Application Server",
+      "kind": "server",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "dev-laptop",
+      "name": "Lead Developer Workstation",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "cache-redis",
+      "name": "User Session Redis Cache",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "customer-db",
+      "name": "PostgreSQL Customer & Transaction DB",
+      "kind": "database",
+      "zone": "prod",
+      "criticality": 4,
+      "crown_jewel": true
+    }
+  ],
+  "identities": [
+    {
+      "id": "id-user-dev",
+      "name": "Full-Stack Web Developer",
+      "kind": "user",
+      "tier": 2
+    },
+    {
+      "id": "id-admin-cloud",
+      "name": "AWS Root Cloud Administrator",
+      "kind": "admin",
+      "tier": 0
+    }
+  ],
+  "edges": [
+    {
+      "src": "cdn-gw",
+      "dst": "app-server",
+      "technique": "exploit_public_app"
+    },
+    {
+      "src": "dev-laptop",
+      "dst": "app-server",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "app-server",
+      "dst": "cache-redis",
+      "technique": "db_login"
+    },
+    {
+      "src": "app-server",
+      "dst": "customer-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "dev-laptop",
+      "dst": "customer-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-admin-cloud",
+      "dst": "dev-laptop",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-user-dev",
+      "dst": "app-server",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-user-dev",
+      "dst": "dev-laptop",
+      "technique": "db_login"
+    }
+  ],
+  "flows": [
+    {
+      "id": "F1",
+      "name": "Public Storefront Ingress Traffic",
+      "src": "cdn-gw",
+      "dst": "app-server",
+      "technique": "exploit_public_app",
+      "criticality": 3
+    },
+    {
+      "id": "F2",
+      "name": "Customer Orders & Payment Ledger Sync",
+      "src": "app-server",
+      "dst": "customer-db",
+      "technique": "db_login",
+      "criticality": 4
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-waf-easy",
+      "name": "Cloudflare Edge WAF Protection",
+      "cost": 800,
+      "blocks": [
+        "exploit_public_app",
+        "T1190"
+      ],
+      "scope": [
+        "cdn-gw",
+        "app-server"
+      ],
+      "efficacy": 0.85
+    },
+    {
+      "id": "ctrl-db-auth-easy",
+      "name": "Database IAM Token Authentication",
+      "cost": 1200,
+      "blocks": [
+        "db_login",
+        "T1078"
+      ],
+      "scope": [
+        "customer-db"
+      ],
+      "efficacy": 0.90
+    }
+  ],
+  "parent_id": null
+}
