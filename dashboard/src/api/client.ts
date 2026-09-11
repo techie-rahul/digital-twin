@@ -13,6 +13,7 @@ import {
   CrawlAuditResult,
   LineageOut,
 } from '../types/api';
+import { BENCHMARK_FALLBACK_TWINS } from '../data/benchmarkFallbacks';
 
 const API_BASE = '/api';
 
@@ -24,8 +25,8 @@ export const apiClient = {
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       return await res.json();
     } catch (e) {
-      console.warn('Falling back to local golden twin fixture:', e);
-      return getFallbackTwin();
+      console.warn(`Falling back to local twin fixture for ${twinId || 'golden'}:`, e);
+      return getFallbackTwin(twinId);
     }
   },
 
@@ -250,7 +251,13 @@ export const apiClient = {
 // Fallback Mocks
 // -----------------------------------------------------------------------------
 
-function getFallbackTwin(): Twin {
+function getFallbackTwin(twinId?: string): Twin {
+  if (twinId && BENCHMARK_FALLBACK_TWINS[twinId]) {
+    return BENCHMARK_FALLBACK_TWINS[twinId];
+  }
+  if (BENCHMARK_FALLBACK_TWINS['twin-finbank-golden']) {
+    return BENCHMARK_FALLBACK_TWINS['twin-finbank-golden'];
+  }
   return {
     id: "twin-finbank-golden",
     assets: [

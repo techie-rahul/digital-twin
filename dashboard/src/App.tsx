@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Layers, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import { Header } from './components/Header';
 import { DemoPresetBar } from './components/DemoPresetBar';
 import { DecisionHeroCard } from './components/DecisionHeroCard';
@@ -721,12 +722,6 @@ export const App: React.FC = () => {
 
                   {/* Actions & Threat Actor Profile Selector */}
                   <div className="flex items-center gap-2.5 self-start md:self-auto flex-wrap">
-                    <button
-                      onClick={() => setIsDataStudioOpen(true)}
-                      className="px-2.5 py-1 text-xs rounded-lg bg-brand-orange hover:bg-brand-orange-hover text-white font-bold shadow-subtle transition-all active:scale-95 cursor-pointer"
-                    >
-                      ⇄ Import / Export JSON
-                    </button>
                     <span className="text-[11px] font-mono font-bold text-ash-400 uppercase">Threat Actor:</span>
                     <div className="inline-flex rounded-lg bg-ash-100 p-0.5 border border-ash-200">
                       <button
@@ -815,6 +810,49 @@ export const App: React.FC = () => {
               onOpenEvidence={() => setPresentationMode('evidence')}
               activePresetId={activePresetId}
             />
+
+            {/* Workspace View Switcher (Graph Canvas | Interactive Sandbox | Portfolio Optimizer) */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+              <div className="inline-flex items-center p-1 rounded-xl bg-white border border-canvas-border shadow-subtle text-xs font-sans">
+                <button
+                  onClick={() => setActiveTab('topology')}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    activeTab === 'topology'
+                      ? 'bg-ash-900 text-white shadow-xs'
+                      : 'text-ash-500 hover:text-ash-900 hover:bg-ash-50'
+                  }`}
+                >
+                  <Layers className={`w-3.5 h-3.5 ${activeTab === 'topology' ? 'text-brand-orange' : 'text-ash-400'}`} />
+                  <span>Attack Topology Canvas</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('console')}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    activeTab === 'console'
+                      ? 'bg-ash-900 text-white shadow-xs'
+                      : 'text-ash-500 hover:text-ash-900 hover:bg-ash-50'
+                  }`}
+                >
+                  <ShieldCheck className={`w-3.5 h-3.5 ${activeTab === 'console' ? 'text-brand-orange' : 'text-ash-400'}`} />
+                  <span>Change Sandbox</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('optimizer')}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    activeTab === 'optimizer'
+                      ? 'bg-ash-900 text-white shadow-xs'
+                      : 'text-ash-500 hover:text-ash-900 hover:bg-ash-50'
+                  }`}
+                >
+                  <SlidersHorizontal className={`w-3.5 h-3.5 ${activeTab === 'optimizer' ? 'text-brand-orange' : 'text-ash-400'}`} />
+                  <span>Portfolio Optimizer</span>
+                </button>
+              </div>
+
+              <div className="text-[11px] font-mono text-ash-400 hidden md:block">
+                Interactive Graph & Policy Simulation
+              </div>
+            </div>
 
             {/* Sub-tab view: Topology Graph (default) vs Custom Sandbox / Optimizer */}
             {activeTab === 'topology' && (

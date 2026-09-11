@@ -75,90 +75,122 @@ export const DemoPresetBar: React.FC<DemoPresetBarProps> = ({
     }
   };
 
+  const getPresetMeta = (id: DemoPresetId) => {
+    switch (id) {
+      case 'preset-baseline':
+        return {
+          step: '01',
+          title: 'Baseline',
+          pill: 'UNPROTECTED',
+          pillClass: 'bg-ash-100 text-ash-600 border border-ash-200',
+          sub: 'Full Attack Surface',
+        };
+      case 'preset-full-seg':
+        return {
+          step: '02',
+          title: 'Coarse Segregation',
+          pill: '⛔ P1 OUTAGE',
+          pillClass: 'bg-red-100 text-red-800 border border-red-200 font-extrabold',
+          sub: 'Severs Flow F3',
+        };
+      case 'preset-mfa':
+        return {
+          step: '03',
+          title: 'Human MFA',
+          pill: '⚠️ REVIEW',
+          pillClass: 'bg-amber-100 text-amber-800 border border-amber-200 font-bold',
+          sub: 'Bypasses Service Svc',
+        };
+      case 'preset-scoped-seg':
+        return {
+          step: '04',
+          title: 'Scoped Segregation',
+          pill: '✅ APPROVED',
+          pillClass: 'bg-emerald-100 text-emerald-800 border border-emerald-200 font-extrabold',
+          sub: '0 Broken Flows',
+        };
+      case 'preset-sync-drift':
+        return {
+          step: '05',
+          title: 'Contractor Drift',
+          pill: '⚡ DRIFT',
+          pillClass: 'bg-orange-100 text-orange-900 border border-orange-200 font-extrabold',
+          sub: 'Role Bypass Detected',
+        };
+    }
+  };
+
   return (
-    <div className="rounded-2xl bg-white border border-canvas-border p-4 shadow-subtle space-y-3">
-      {/* Top Banner: Pitch Demo Ribbon */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-canvas-border text-xs">
+    <div className="rounded-2xl bg-white border border-canvas-border p-3.5 shadow-subtle space-y-2.5">
+      {/* Top Banner: Storyline Header */}
+      <div className="flex items-center justify-between pb-2 border-b border-canvas-border text-xs">
         <div className="flex items-center gap-2">
           <span className="flex h-2 w-2 relative">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-orange" />
           </span>
-          <span className="font-mono font-bold uppercase tracking-wider text-ash-700 text-[11px]">
-            Executive Pitch Flow • 4-Minute Change Story
+          <span className="font-mono font-bold uppercase tracking-wider text-ash-800 text-[11px]">
+            Executive Change Scenarios
           </span>
-          <span className="hidden md:inline px-1.5 py-0.2 rounded text-[10px] font-mono text-ash-400 bg-ash-100 border border-ash-200">
+          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono text-ash-500 bg-ash-100 border border-ash-200">
             Keys 1-5
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          {onOpenDataStudio && (
-            <button
-              onClick={onOpenDataStudio}
-              title="Open Digital Twin JSON Data Studio (Import, Export, Copy-Paste, Test Error Files)"
-              className="px-2.5 py-1 rounded-lg bg-brand-orange hover:bg-brand-orange-hover text-white font-sans font-bold text-xs shadow-subtle flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-            >
-              <FileCode2 className="w-3.5 h-3.5" />
-              <span>Import / Export JSON</span>
-            </button>
-          )}
-
-          <div className="text-[11px] font-mono text-ash-400 hidden sm:flex items-center gap-1">
-            <Clock className="w-3 h-3 text-ash-400" />
-            <span>Judges Q&A Mode</span>
-          </div>
+        <div className="text-[11px] font-mono text-ash-400 hidden sm:flex items-center gap-1.5">
+          <Clock className="w-3 h-3 text-ash-400" />
+          <span>Deterministic CAB Sandbox</span>
         </div>
       </div>
 
-      {/* 5 Preset Buttons Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+      {/* 5 Preset Cards Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
         {presetsList.map((preset) => {
           const isActive = activePresetId === preset.id;
+          const meta = getPresetMeta(preset.id);
 
           return (
             <button
               key={preset.id}
               onClick={() => onSelectPreset(preset.id)}
-              className={`relative flex items-center gap-2 px-3 py-2.5 rounded-xl text-left border transition-all duration-150 select-none active:scale-[0.98] ${
+              className={`relative flex flex-col p-2.5 rounded-xl text-left border transition-all duration-150 select-none active:scale-[0.98] cursor-pointer ${
                 isActive
                   ? getPresetActiveStyle(preset.id)
-                  : 'bg-ash-50/70 hover:bg-white text-ash-700 border-canvas-border hover:border-ash-300'
+                  : 'bg-ash-50/70 hover:bg-white text-ash-700 border-canvas-border hover:border-ash-300 shadow-2xs'
               }`}
             >
-              <div className="flex-shrink-0">{getPresetIcon(preset.id)}</div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-1">
-                  <span className={`text-xs font-mono font-bold truncate ${isActive ? 'font-extrabold' : ''}`}>
-                    {preset.label}
-                  </span>
-                  {isActive && (
-                    <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-brand-orange" />
-                  )}
-                </div>
-                <span className="text-[10px] font-mono text-ash-400 block truncate">
-                  {preset.shortLabel}
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="text-[10px] font-mono font-bold text-ash-400">
+                  {meta.step}
+                </span>
+                <span className={`px-1.5 py-0.2 rounded text-[9px] font-mono ${meta.pillClass}`}>
+                  {meta.pill}
                 </span>
               </div>
+
+              <div className="flex items-center gap-1.5 min-w-0">
+                <div className="shrink-0">{getPresetIcon(preset.id)}</div>
+                <span className={`text-xs font-bold font-sans truncate ${isActive ? 'text-ash-900 font-extrabold' : 'text-ash-800'}`}>
+                  {meta.title}
+                </span>
+              </div>
+
+              <span className="text-[10px] font-mono text-ash-500 mt-1 block truncate">
+                {meta.sub}
+              </span>
             </button>
           );
         })}
       </div>
 
-      {/* Active Preset Live Explainer Strip */}
-      <div className="pt-1 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs font-mono">
-        <div className="flex items-center gap-2 text-ash-600">
-          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-ash-100 text-ash-700 border border-ash-200">
-            SCENARIO STATE
-          </span>
-          <span className="font-sans text-xs text-ash-700 font-medium">
-            {activePreset.tagline}
-          </span>
-        </div>
-
-        <div className="text-[11px] text-ash-400 hidden lg:block">
-          Click any preset to simulate the digital twin response
-        </div>
+      {/* Active Scenario Live Explainer Strip */}
+      <div className="pt-0.5 flex items-center gap-2 text-xs font-mono">
+        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-ash-100 text-ash-700 border border-ash-200 shrink-0">
+          SCENARIO STATE
+        </span>
+        <span className="font-sans text-xs text-ash-800 font-medium truncate">
+          {activePreset.tagline}
+        </span>
       </div>
     </div>
   );

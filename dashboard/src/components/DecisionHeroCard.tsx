@@ -116,237 +116,159 @@ export const DecisionHeroCard: React.FC<DecisionHeroCardProps> = ({
       {/* Decorative Brand Orange Accent Stripe */}
       <div className="h-1.5 w-full bg-gradient-to-r from-brand-orange via-[#FF7733] to-amber-500" />
 
-      {/* Main Container */}
-      <div className="p-6 md:p-7 space-y-6">
-        {/* =================================================================== */}
-        {/* 1. TOP HALF: PROPOSED CHANGE */}
-        {/* =================================================================== */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={proposedChange.title + activePresetId}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="space-y-4"
-          >
-            {/* Header: Title + Big Verdict Badge */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-canvas-border">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-ash-100 text-ash-600 border border-ash-200">
-                    Proposed Change Evaluation
-                  </span>
-                  {proposedChange.isBusinessOutage && (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-red-100 text-red-700 border border-red-200 animate-pulse">
-                      P1 Outage Detected
-                    </span>
-                  )}
-                </div>
-                <h2 className="text-lg md:text-xl font-bold font-sans text-ash-900 tracking-tight flex items-center gap-2">
-                  <span>PROPOSED CHANGE:</span>
-                  <span className="text-ash-900 font-extrabold">{proposedChange.title}</span>
-                </h2>
-              </div>
-
-              {/* Top Decision Verdict */}
-              <div className="flex items-center gap-2.5 sm:self-start">
-                <span className="text-xs font-mono font-bold uppercase text-ash-400 hidden lg:inline">
-                  DECISION VERDICT:
-                </span>
-                {renderVerdictBadge(proposedChange.verdict, proposedChange.verdictLabel, true)}
-              </div>
-            </div>
-
-            {/* Impact Metric Rows */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 font-sans">
-              {/* Row 1: Security Impact */}
-              <div className="p-3.5 rounded-xl bg-ash-50/80 border border-canvas-border space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-mono font-bold uppercase tracking-wide text-ash-500 flex items-center gap-1.5">
-                    <ShieldAlert className="w-3.5 h-3.5 text-brand-orange" />
-                    <span>Security Impact</span>
-                  </span>
-                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold bg-brand-orange-light text-brand-orange border border-brand-orange-border">
-                    {proposedChange.pathReductionPct > 0
-                      ? `-${proposedChange.pathReductionPct.toFixed(0)}% Paths`
-                      : 'Baseline'}
-                  </span>
-                </div>
-                <p className="text-xs font-semibold text-ash-900 leading-snug">
-                  {proposedChange.securityImpact}
-                </p>
-                {proposedChange.securityImpactDetail && (
-                  <p className="text-[11px] text-ash-500 font-mono leading-tight">
-                    {proposedChange.securityImpactDetail}
-                  </p>
-                )}
-              </div>
-
-              {/* Row 2: Business Impact (The Outage Differentiator) */}
-              <div
-                className={`p-3.5 rounded-xl border space-y-1.5 transition-colors ${
-                  proposedChange.isBusinessOutage
-                    ? 'bg-red-50/90 border-red-300 ring-1 ring-red-400/30'
-                    : 'bg-ash-50/80 border-canvas-border'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`text-[11px] font-mono font-bold uppercase tracking-wide flex items-center gap-1.5 ${
-                      proposedChange.isBusinessOutage ? 'text-red-700' : 'text-ash-500'
-                    }`}
-                  >
-                    {proposedChange.isBusinessOutage ? (
-                      <XCircle className="w-3.5 h-3.5 text-red-600" />
-                    ) : (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    )}
-                    <span>Business Impact</span>
-                  </span>
-                  <span
-                    className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold ${
-                      proposedChange.isBusinessOutage
-                        ? 'bg-red-200 text-red-900 font-bold border border-red-300'
-                        : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                    }`}
-                  >
-                    {proposedChange.isBusinessOutage ? 'P1 OUTAGE' : '100% OPERATIONAL'}
-                  </span>
-                </div>
-                <p
-                  className={`text-xs font-semibold leading-snug ${
-                    proposedChange.isBusinessOutage ? 'text-red-900 font-bold' : 'text-ash-900'
-                  }`}
-                >
-                  {proposedChange.businessImpact}
-                </p>
-                {proposedChange.businessOutageLabel && (
-                  <p className="text-[11px] font-mono text-red-700 font-medium">
-                    {proposedChange.businessOutageLabel}
-                  </p>
-                )}
-              </div>
-
-              {/* Row 3: Confidence & Statistical Proof */}
-              <div className="p-3.5 rounded-xl bg-ash-50/80 border border-canvas-border space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-mono font-bold uppercase tracking-wide text-ash-500 flex items-center gap-1.5">
-                    <Compass className="w-3.5 h-3.5 text-ash-600" />
-                    <span>Confidence Score</span>
-                  </span>
-                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold bg-ash-200 text-ash-700 border border-ash-300">
-                    Wilson CI 95%
-                  </span>
-                </div>
-                <p className="text-xs font-semibold text-ash-900 leading-snug">
-                  {proposedChange.confidenceLevel} ({proposedChange.confidenceScore}%)
-                </p>
-                <p className="text-[11px] text-ash-500 font-mono leading-tight truncate" title={proposedChange.confidenceDetail}>
-                  {proposedChange.confidenceDetail}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </AnimatePresence>
-
-        {/* =================================================================== */}
-        {/* 2. DIVIDER WITH RECOMMENDATION CONNECTOR */}
-        {/* =================================================================== */}
-        <div className="relative py-1 flex items-center justify-center">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-dashed border-ash-300" />
+      <div className="p-4 md:p-5 space-y-3.5">
+        {/* Top Meta Bar */}
+        <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-canvas-border">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-ash-100 text-ash-700 border border-ash-200">
+              CAB Change Verdict
+            </span>
+            {proposedChange.isBusinessOutage && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-red-100 text-red-700 border border-red-200 animate-pulse">
+                P1 Outage Detected
+              </span>
+            )}
           </div>
-          <div className="relative px-4 py-1 rounded-full bg-white border border-ash-300 text-[10px] font-mono font-bold tracking-wider text-ash-600 uppercase shadow-subtle flex items-center gap-1.5">
-            <Sparkles className="w-3 h-3 text-brand-orange" />
-            <span>Digital Twin Advisory Recommendation</span>
+          {onOpenEvidence && (
+            <button
+              onClick={onOpenEvidence}
+              className="text-[11px] font-mono text-ash-500 hover:text-brand-orange transition-colors flex items-center gap-1 cursor-pointer font-medium"
+            >
+              <span>Inspect Statistical Proof</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+
+        {/* 2-Column Comparative Layout: Proposed Change vs Recommended Alternative */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+          {/* Left Column: Proposed Change */}
+          <div
+            className={`p-3.5 rounded-xl border flex flex-col justify-between gap-3 transition-colors ${
+              proposedChange.isBusinessOutage
+                ? 'bg-red-50/40 border-red-200 ring-1 ring-red-300/30'
+                : 'bg-ash-50/70 border-canvas-border'
+            }`}
+          >
+            <div className="space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-ash-400 block">
+                    PROPOSED CHANGE
+                  </span>
+                  <h3 className="text-sm md:text-base font-bold text-ash-900 font-sans tracking-tight">
+                    {proposedChange.title}
+                  </h3>
+                </div>
+                <div className="shrink-0">
+                  {renderVerdictBadge(proposedChange.verdict, proposedChange.verdictLabel)}
+                </div>
+              </div>
+
+              {/* Trade-off Lines */}
+              <div className="space-y-1.5 text-xs font-sans">
+                <div className="flex items-center gap-2">
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold bg-brand-orange-light text-brand-orange border border-brand-orange-border shrink-0">
+                    {proposedChange.pathReductionPct > 0 ? `-${proposedChange.pathReductionPct.toFixed(0)}% Paths` : 'Baseline'}
+                  </span>
+                  <span className="text-ash-700 truncate font-medium">
+                    {proposedChange.securityImpact}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold shrink-0 ${
+                    proposedChange.isBusinessOutage
+                      ? 'bg-red-100 text-red-800 border border-red-200'
+                      : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                  }`}>
+                    {proposedChange.isBusinessOutage ? 'P1 OUTAGE' : 'OPERATIONAL'}
+                  </span>
+                  <span className={`truncate font-medium ${proposedChange.isBusinessOutage ? 'text-red-900 font-semibold' : 'text-ash-700'}`}>
+                    {proposedChange.businessImpact}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {proposedChange.verdictSubtext && (
+              <p className="text-[11px] font-mono text-ash-500 pt-1 border-t border-black/5 truncate">
+                {proposedChange.verdictSubtext}
+              </p>
+            )}
+          </div>
+
+          {/* Right Column: Suggested Alternative */}
+          <div className="p-3.5 rounded-xl bg-emerald-50/50 border border-emerald-200 flex flex-col justify-between gap-3 shadow-2xs">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-800 block">
+                    RECOMMENDED ALTERNATIVE
+                  </span>
+                  <h3 className="text-sm md:text-base font-bold text-emerald-950 font-sans tracking-tight">
+                    {suggestedAlternative.title}
+                  </h3>
+                </div>
+                <div className="shrink-0">
+                  {renderVerdictBadge(suggestedAlternative.verdict, suggestedAlternative.verdictLabel)}
+                </div>
+              </div>
+
+              {/* Metrics */}
+              <div className="space-y-1.5 text-xs font-sans">
+                <div className="flex items-center gap-2">
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+                    PROTECTION
+                  </span>
+                  <span className="text-ash-800 truncate font-medium">
+                    {suggestedAlternative.securityImpact}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-emerald-200 text-emerald-900 border border-emerald-300 shrink-0">
+                    BUSINESS SAFE
+                  </span>
+                  <span className="text-emerald-900 truncate font-semibold">
+                    {suggestedAlternative.businessImpact}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <div className="flex items-center justify-between pt-1 border-t border-emerald-200/60 gap-2">
+              <span className="text-[11px] font-mono text-emerald-800 truncate">
+                Residual: {suggestedAlternative.residualRoute}
+              </span>
+              {suggestedAlternative.canApply && suggestedAlternative.targetPresetId && onApplyAlternative && (
+                <button
+                  onClick={() => onApplyAlternative(suggestedAlternative.targetPresetId!)}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-mono font-bold shadow-subtle transition-all active:scale-[0.98] cursor-pointer"
+                  title="Apply this recommended alternative scenario immediately"
+                >
+                  <span>Apply Fix</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* =================================================================== */}
-        {/* 3. BOTTOM HALF: SUGGESTED ALTERNATIVE */}
-        {/* =================================================================== */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={suggestedAlternative.title + activePresetId}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25, ease: 'easeOut', delay: 0.05 }}
-            className="p-4 md:p-5 rounded-xl bg-emerald-50/50 border border-emerald-200/90 shadow-subtle space-y-3.5"
-          >
-            {/* Alternative Title Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-800 font-bold shadow-subtle">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-700" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-800">
-                    Recommended Path to Green
-                  </span>
-                  <h3 className="text-base font-bold text-emerald-950 font-sans tracking-tight">
-                    SUGGESTED ALTERNATIVE: {suggestedAlternative.title}
-                  </h3>
-                </div>
-              </div>
+        {/* Bottom Statistical Ribbon */}
+        <div className="pt-2 border-t border-canvas-border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-mono text-ash-500">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-3 h-3 text-brand-orange" />
+            <span>Wilson CI (95%): <strong className="text-ash-700">{proposedChange.confidenceLevel} ({proposedChange.confidenceScore}%)</strong></span>
+            <span className="text-ash-300">•</span>
+            <span>Deterministic Graph Traversal</span>
+          </div>
 
-              {/* Alternative Verdict + Action */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold uppercase text-emerald-800 hidden sm:inline">
-                  DECISION VERDICT:
-                </span>
-                {renderVerdictBadge(suggestedAlternative.verdict, suggestedAlternative.verdictLabel)}
-
-                {suggestedAlternative.canApply && suggestedAlternative.targetPresetId && onApplyAlternative && (
-                  <button
-                    onClick={() => onApplyAlternative(suggestedAlternative.targetPresetId!)}
-                    className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-mono font-bold shadow-subtle transition-all active:scale-[0.98]"
-                    title="Apply this recommended alternative scenario immediately"
-                  >
-                    <span>Apply Alternative</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Alternative Metrics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs font-sans">
-              <div className="p-2.5 rounded-lg bg-white/90 border border-emerald-200 space-y-1">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-emerald-800 block">
-                  Security Impact:
-                </span>
-                <p className="font-semibold text-ash-900">
-                  {suggestedAlternative.securityImpact}
-                </p>
-              </div>
-
-              <div className="p-2.5 rounded-lg bg-white/90 border border-emerald-200 space-y-1">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-emerald-800 block">
-                  Business Impact:
-                </span>
-                <p className="font-semibold text-emerald-900">
-                  {suggestedAlternative.businessImpact}
-                </p>
-              </div>
-
-              <div className="p-2.5 rounded-lg bg-white/90 border border-emerald-200 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-emerald-800">
-                    Residual Route:
-                  </span>
-                  <span className="text-[9px] font-mono text-ash-500 bg-ash-100 px-1 py-0.2 rounded border border-ash-200">
-                    Documented
-                  </span>
-                </div>
-                <p className="font-mono text-[11px] text-ash-700 leading-tight">
-                  {suggestedAlternative.residualRoute}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </AnimatePresence>
+          <div className="text-ash-400">
+            Digital Twin Policy Evaluation Engine
+          </div>
+        </div>
       </div>
     </div>
   );

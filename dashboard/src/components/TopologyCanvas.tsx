@@ -222,24 +222,24 @@ export const TopologyCanvas: React.FC<TopologyCanvasProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Simulation Command Bar */}
-      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 p-4 rounded-xl bg-white border border-canvas-border shadow-subtle">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-brand-orange-light text-brand-orange border border-brand-orange-border">
-            <Activity className="w-5 h-5" />
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3 p-3 rounded-xl bg-white border border-canvas-border shadow-subtle">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-lg bg-brand-orange-light text-brand-orange border border-brand-orange-border shrink-0">
+            <Activity className="w-4 h-4" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-ash-900 tracking-tight">
                 Adversary Traversal & Business Dependency Graph
               </h3>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-orange-light text-brand-orange border border-brand-orange-border">
-                DIGITAL TWIN V2.1
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-ash-100 text-ash-700 border border-ash-200">
+                {assets.length} Assets • {edges.length} Edges
               </span>
             </div>
-            <p className="text-xs text-ash-500 mt-0.5">
-              Interactive directed topology graph modelling lateral adversary movement, active security controls, and operational flows
+            <p className="text-[11px] text-ash-400 mt-0.5 hidden sm:block">
+              Interactive directed topology modelling adversary lateral movement, active security controls, and operational flows
             </p>
           </div>
         </div>
