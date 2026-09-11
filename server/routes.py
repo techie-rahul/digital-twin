@@ -12,6 +12,7 @@ from backend.core.walk import simulate as run_walk_simulation
 from backend.core.results import compute_results
 from backend.rules.evaluate import evaluate_change
 from backend.rules.optimize import optimize_controls
+from backend.rules.audit import crawl_audit
 
 router = APIRouter(prefix="/api", tags=["Digital Twin & Sandbox"])
 
@@ -266,3 +267,23 @@ def get_blast_radius(asset_id: str):
         total_downstream_criticality=total_crit,
         direct_dependencies=tuple(sorted(set(direct))),
     )
+
+
+class CrawlAuditRequest(BaseModel):
+    start_node: str = "internet"
+    target_node: Optional[str] = None  # defaults to highest-crit crown jewel
+    active_control_ids: tuple[str, ...] = ()
+
+
+@router.post("/crawl-audit")
+def post_crawl_audit(req: CrawlAuditRequest):
+    """Node-by-node crawling security audit — walks the graph like a chess piece."""
+    twin = get_golden_twin()
+    result = crawl_audit(
+        twin=twin,
+        start_node=req.start_node,
+        target_node=req.target_node,
+        active_control_ids=req.active_control_ids,
+    )
+    return result.model_dump()
+
