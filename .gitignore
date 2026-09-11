@@ -10,3 +10,5 @@ build/
 .venv/
 venv/
 ENV/
+node_modules/
+dashboard/node_modules/

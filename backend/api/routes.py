@@ -29,11 +29,12 @@ from backend.core.blast_radius import calculate_blast_radius
 from backend.rules.compile import compile_twin
 from backend.rules.evaluate import evaluate_change as _real_evaluate_change
 from backend.rules.optimize import optimize as real_optimize
+from backend.rules.audit import crawl_audit, CrawlAuditResult
 
 from backend.api import cache as result_cache
 from backend.api.schemas import (
     AssetOut, BlastRadiusOut, CloneOut, CloneRequest, ControlOut,
-    EdgeOut, EvaluateChangeRequest, EvaluatedRouteOut, HealthOut,
+    CrawlAuditRequest, EdgeOut, EvaluateChangeRequest, EvaluatedRouteOut, HealthOut,
     IdentityOut, LineageNodeOut, LineageOut, OptimizeRequest,
     ServiceFlowOut, SimulateOut, SimulateRequest, TwinOut,
 )
@@ -449,3 +450,29 @@ def lineage(twin_id: str, request: Request) -> LineageOut:
         current_id = dt.twin.parent_id
 
     return LineageOut(twin_id=twin_id, lineage=chain)
+
+
+# ─────────────────────────────────────────────
+# POST /crawl-audit
+# ─────────────────────────────────────────────
+
+@router.post("/crawl-audit", response_model=CrawlAuditResult, tags=["Analysis"])
+@router.post("/audit", response_model=CrawlAuditResult, tags=["Analysis"], include_in_schema=False)
+def post_crawl_audit(body: CrawlAuditRequest, request: Request) -> CrawlAuditResult:
+    """
+    Node-by-node crawling security audit (Chesspiece feature).
+
+    Walks the network topology hop-by-hop like a chess piece, producing an
+    explainable audit of node vulnerabilities, missing controls, MITRE ATT&CK
+    technique exposures, business-flow risks, and recommended cheapest fixes.
+    """
+    dt = _get_twin(request, body.twin_id)
+    return crawl_audit(
+        twin=dt.twin,
+        start_node=body.start_node,
+        target_node=body.target_node,
+        active_control_ids=body.active_control_ids,
+        max_paths=body.max_paths,
+        max_depth=body.max_depth,
+    )
+

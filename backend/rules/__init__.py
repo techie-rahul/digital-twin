@@ -32,6 +32,16 @@ from backend.rules.optimize import (
     optimize,
     optimize_controls,
 )
+from backend.rules.audit import (
+    AuditSummary,
+    CrawlAuditPath,
+    CrawlAuditResult,
+    NodeAudit,
+    PrioritizedFix,
+    RecommendedFix,
+    Vulnerability,
+    crawl_audit,
+)
 
 __all__ = [
     "TechniqueDefinition",
@@ -58,5 +68,13 @@ __all__ = [
     "Portfolio",
     "optimize",
     "optimize_controls",
+    "AuditSummary",
+    "CrawlAuditPath",
+    "CrawlAuditResult",
+    "NodeAudit",
+    "PrioritizedFix",
+    "RecommendedFix",
+    "Vulnerability",
+    "crawl_audit",
 ]
 

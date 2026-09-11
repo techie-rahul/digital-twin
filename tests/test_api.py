@@ -446,3 +446,36 @@ def test_simulate_invalid_n(client):
 def test_simulate_missing_required_fields(client):
     r = client.post("/simulate", json={"n": 10})
     assert r.status_code == 422
+
+
+# ─────────────────────────────────────────────
+# 12. POST /crawl-audit (Chesspiece feature)
+# ─────────────────────────────────────────────
+
+def test_crawl_audit_happy_path(client):
+    r = client.post("/crawl-audit", json={
+        "twin_id": GOLDEN_ID,
+        "start_node": "web-dmz",
+        "target_node": "prod-db",
+    })
+    assert r.status_code == 200
+    body = r.json()
+    assert body["start_node"] == "web-dmz"
+    assert body["target_node"] == "prod-db"
+    assert body["total_paths"] >= 1
+    assert "summary" in body
+    assert "paths" in body
+    assert isinstance(body["summary"]["weakest_node_score"], float)
+
+
+def test_crawl_audit_alias_audit(client):
+    r = client.post("/audit", json={
+        "twin_id": GOLDEN_ID,
+        "start_node": "web-dmz",
+    })
+    assert r.status_code == 200
+    body = r.json()
+    assert body["start_node"] == "web-dmz"
+    assert body["target_node"] == "prod-db"
+    assert "summary" in body
+
