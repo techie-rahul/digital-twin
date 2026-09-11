@@ -29,7 +29,7 @@ from backend.core.search import (
 
 from backend.core.walk import (
     simulate,
-    Result,
+    Result as WalkResult,
     SimulationResult,
     EvaluatedRoute,
     TrialRecord,
@@ -40,6 +40,20 @@ from backend.core.walk import (
     compute_route_noise,
     compute_route_utility,
     execute_trial,
+)
+
+from backend.core.results import (
+    Result,
+    Delta,
+    RouteStat,
+    TopRouteStats,
+    compute_results,
+    diff,
+    compute_wilson_ci,
+    compute_p90,
+    compute_effort_distribution,
+    compute_edge_frequencies,
+    compute_weighted_risk,
 )
 
 __all__ = [
@@ -63,6 +77,7 @@ __all__ = [
     "SearchCache",
     "GLOBAL_SEARCH_CACHE",
     "simulate",
+    "WalkResult",
     "Result",
     "SimulationResult",
     "EvaluatedRoute",
@@ -74,6 +89,16 @@ __all__ = [
     "compute_route_noise",
     "compute_route_utility",
     "execute_trial",
+    "Delta",
+    "RouteStat",
+    "TopRouteStats",
+    "compute_results",
+    "diff",
+    "compute_wilson_ci",
+    "compute_p90",
+    "compute_effort_distribution",
+    "compute_edge_frequencies",
+    "compute_weighted_risk",
 ]
 
 
