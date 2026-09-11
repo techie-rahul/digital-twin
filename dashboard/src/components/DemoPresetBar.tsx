@@ -56,22 +56,22 @@ export const DemoPresetBar: React.FC<DemoPresetBarProps> = ({
       case 'preset-scoped-seg':
         return <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />;
       case 'preset-sync-drift':
-        return <RefreshCw className="w-3.5 h-3.5 text-brand-orange animate-spin" style={{ animationDuration: '6s' }} />;
+        return <RefreshCw className="w-3.5 h-3.5 text-orange-600" />;
     }
   };
 
   const getPresetActiveStyle = (id: DemoPresetId) => {
     switch (id) {
       case 'preset-baseline':
-        return 'bg-white text-ash-900 border-ash-300 shadow-card ring-1 ring-ash-300';
+        return 'bg-white text-ash-900 border-ash-400 shadow-sm ring-1 ring-ash-300';
       case 'preset-full-seg':
-        return 'bg-red-50 text-red-900 border-red-300 shadow-card ring-2 ring-red-400/40';
+        return 'bg-white text-ash-900 border-red-400 shadow-sm ring-1 ring-red-300';
       case 'preset-mfa':
-        return 'bg-amber-50 text-amber-900 border-amber-300 shadow-card ring-2 ring-amber-400/40';
+        return 'bg-white text-ash-900 border-amber-400 shadow-sm ring-1 ring-amber-300';
       case 'preset-scoped-seg':
-        return 'bg-emerald-50 text-emerald-900 border-emerald-300 shadow-card ring-2 ring-emerald-400/40';
+        return 'bg-white text-ash-900 border-emerald-400 shadow-sm ring-1 ring-emerald-300';
       case 'preset-sync-drift':
-        return 'bg-orange-50 text-orange-950 border-orange-300 shadow-card ring-2 ring-brand-orange/40';
+        return 'bg-white text-ash-900 border-orange-400 shadow-sm ring-1 ring-orange-300';
     }
   };
 
@@ -81,40 +81,40 @@ export const DemoPresetBar: React.FC<DemoPresetBarProps> = ({
         return {
           step: '01',
           title: 'Baseline',
-          pill: 'UNPROTECTED',
-          pillClass: 'bg-ash-100 text-ash-600 border border-ash-200',
+          pill: 'BASELINE',
+          pillClass: 'bg-ash-100 text-ash-700 border border-ash-200',
           sub: 'Full Attack Surface',
         };
       case 'preset-full-seg':
         return {
           step: '02',
           title: 'Coarse Segregation',
-          pill: '⛔ P1 OUTAGE',
-          pillClass: 'bg-red-100 text-red-800 border border-red-200 font-extrabold',
+          pill: 'OUTAGE RISK',
+          pillClass: 'bg-red-50 text-red-700 border border-red-200 font-semibold',
           sub: 'Severs Flow F3',
         };
       case 'preset-mfa':
         return {
           step: '03',
           title: 'Human MFA',
-          pill: '⚠️ REVIEW',
-          pillClass: 'bg-amber-100 text-amber-800 border border-amber-200 font-bold',
+          pill: 'INSPECTION',
+          pillClass: 'bg-amber-50 text-amber-800 border border-amber-200 font-medium',
           sub: 'Bypasses Service Svc',
         };
       case 'preset-scoped-seg':
         return {
           step: '04',
           title: 'Scoped Segregation',
-          pill: '✅ APPROVED',
-          pillClass: 'bg-emerald-100 text-emerald-800 border border-emerald-200 font-extrabold',
+          pill: 'VERIFIED',
+          pillClass: 'bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold',
           sub: '0 Broken Flows',
         };
       case 'preset-sync-drift':
         return {
           step: '05',
           title: 'Contractor Drift',
-          pill: '⚡ DRIFT',
-          pillClass: 'bg-orange-100 text-orange-900 border border-orange-200 font-extrabold',
+          pill: 'DRIFT',
+          pillClass: 'bg-orange-50 text-orange-900 border border-orange-200 font-semibold',
           sub: 'Role Bypass Detected',
         };
     }
@@ -125,21 +125,18 @@ export const DemoPresetBar: React.FC<DemoPresetBarProps> = ({
       {/* Top Banner: Storyline Header */}
       <div className="flex items-center justify-between pb-2 border-b border-canvas-border text-xs">
         <div className="flex items-center gap-2">
-          <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-orange" />
-          </span>
-          <span className="font-mono font-bold uppercase tracking-wider text-ash-800 text-[11px]">
-            Executive Change Scenarios
+          <Layers className="w-3.5 h-3.5 text-ash-500" />
+          <span className="font-semibold tracking-tight text-ash-900 text-xs">
+            Change Evaluation Scenarios
           </span>
           <span className="px-1.5 py-0.2 rounded text-[10px] font-mono text-ash-500 bg-ash-100 border border-ash-200">
-            Keys 1-5
+            Keys 1–5
           </span>
         </div>
 
         <div className="text-[11px] font-mono text-ash-400 hidden sm:flex items-center gap-1.5">
           <Clock className="w-3 h-3 text-ash-400" />
-          <span>Deterministic CAB Sandbox</span>
+          <span>Interactive Traversal</span>
         </div>
       </div>
 

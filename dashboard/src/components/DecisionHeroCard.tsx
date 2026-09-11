@@ -38,94 +38,78 @@ export const DecisionHeroCard: React.FC<DecisionHeroCardProps> = ({
     switch (verdict) {
       case 'BLOCK':
         return (
-          <motion.div
-            key="badge-block"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-mono font-bold tracking-wide border shadow-subtle ${
+          <div
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-mono font-semibold tracking-wide border ${
               isLarge
-                ? 'bg-red-50 text-red-700 border-red-300 ring-2 ring-red-500/20 text-sm md:text-base'
-                : 'bg-red-50 text-red-700 border-red-300 text-xs'
+                ? 'bg-red-50 text-red-700 border-red-200 text-xs md:text-sm'
+                : 'bg-red-50 text-red-700 border-red-200 text-xs'
             }`}
           >
-            <span className="text-base">⛔</span>
+            <XCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
             <span>{text}</span>
-          </motion.div>
+          </div>
         );
 
       case 'DEPLOY':
         return (
-          <motion.div
-            key="badge-deploy"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-mono font-bold tracking-wide border shadow-subtle ${
+          <div
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-mono font-semibold tracking-wide border ${
               isLarge
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-2 ring-emerald-500/20 text-sm md:text-base'
-                : 'bg-emerald-50 text-emerald-800 border-emerald-300 text-xs'
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200 text-xs md:text-sm'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-200 text-xs'
             }`}
           >
-            <span className="text-base">✅</span>
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
             <span>{text}</span>
-          </motion.div>
+          </div>
         );
 
       case 'REVIEW':
         return (
-          <motion.div
-            key="badge-review"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-mono font-bold tracking-wide border shadow-subtle ${
+          <div
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-mono font-semibold tracking-wide border ${
               isLarge
-                ? 'bg-amber-50 text-amber-900 border-amber-300 ring-2 ring-amber-500/20 text-sm md:text-base'
-                : 'bg-amber-50 text-amber-900 border-amber-300 text-xs'
+                ? 'bg-amber-50 text-amber-900 border-amber-200 text-xs md:text-sm'
+                : 'bg-amber-50 text-amber-900 border-amber-200 text-xs'
             }`}
           >
-            <span className="text-base">⚠️</span>
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
             <span>{text}</span>
-          </motion.div>
+          </div>
         );
 
       case 'STANDBY':
       default:
         return (
-          <motion.div
-            key="badge-standby"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-mono font-bold tracking-wide border shadow-subtle ${
+          <div
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-mono font-medium tracking-wide border ${
               isLarge
-                ? 'bg-ash-100 text-ash-800 border-ash-300 ring-1 ring-ash-400/20 text-sm md:text-base'
-                : 'bg-ash-100 text-ash-800 border-ash-300 text-xs'
+                ? 'bg-ash-100 text-ash-700 border-ash-200 text-xs md:text-sm'
+                : 'bg-ash-100 text-ash-700 border-ash-200 text-xs'
             }`}
           >
-            <span className="text-base">⏸️</span>
+            <HelpCircle className="w-3.5 h-3.5 text-ash-500 shrink-0" />
             <span>{text}</span>
-          </motion.div>
+          </div>
         );
     }
   };
 
   return (
-    <div className="relative rounded-2xl bg-white border border-canvas-border shadow-card overflow-hidden transition-all duration-300">
-      {/* Decorative Brand Orange Accent Stripe */}
-      <div className="h-1.5 w-full bg-gradient-to-r from-brand-orange via-[#FF7733] to-amber-500" />
+    <div className="relative rounded-2xl bg-white border border-canvas-border shadow-subtle overflow-hidden">
+      {/* Top Hairline Accent */}
+      <div className="h-1 w-full bg-ash-200" />
 
       <div className="p-4 md:p-5 space-y-3.5">
         {/* Top Meta Bar */}
         <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-canvas-border">
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-ash-100 text-ash-700 border border-ash-200">
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider bg-ash-100 text-ash-700 border border-ash-200">
               CAB Change Verdict
             </span>
             {proposedChange.isBusinessOutage && (
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-red-100 text-red-700 border border-red-200 animate-pulse">
-                P1 Outage Detected
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider bg-red-50 text-red-700 border border-red-200">
+                P1 Outage Risk
               </span>
             )}
           </div>
@@ -146,14 +130,14 @@ export const DecisionHeroCard: React.FC<DecisionHeroCardProps> = ({
           <div
             className={`p-3.5 rounded-xl border flex flex-col justify-between gap-3 transition-colors ${
               proposedChange.isBusinessOutage
-                ? 'bg-red-50/40 border-red-200 ring-1 ring-red-300/30'
-                : 'bg-ash-50/70 border-canvas-border'
+                ? 'bg-red-50/30 border-red-200'
+                : 'bg-ash-50/60 border-canvas-border'
             }`}
           >
             <div className="space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-ash-400 block">
+                  <span className="text-[10px] font-mono font-medium uppercase tracking-wider text-ash-400 block">
                     PROPOSED CHANGE
                   </span>
                   <h3 className="text-sm md:text-base font-bold text-ash-900 font-sans tracking-tight">
@@ -177,7 +161,7 @@ export const DecisionHeroCard: React.FC<DecisionHeroCardProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold shrink-0 ${
+                  <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold shrink-0 ${
                     proposedChange.isBusinessOutage
                       ? 'bg-red-100 text-red-800 border border-red-200'
                       : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
@@ -199,11 +183,11 @@ export const DecisionHeroCard: React.FC<DecisionHeroCardProps> = ({
           </div>
 
           {/* Right Column: Suggested Alternative */}
-          <div className="p-3.5 rounded-xl bg-emerald-50/50 border border-emerald-200 flex flex-col justify-between gap-3 shadow-2xs">
+          <div className="p-3.5 rounded-xl bg-emerald-50/40 border border-emerald-200 flex flex-col justify-between gap-3">
             <div className="space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-800 block">
+                  <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-emerald-800 block">
                     RECOMMENDED ALTERNATIVE
                   </span>
                   <h3 className="text-sm md:text-base font-bold text-emerald-950 font-sans tracking-tight">
@@ -218,7 +202,7 @@ export const DecisionHeroCard: React.FC<DecisionHeroCardProps> = ({
               {/* Metrics */}
               <div className="space-y-1.5 text-xs font-sans">
                 <div className="flex items-center gap-2">
-                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
                     PROTECTION
                   </span>
                   <span className="text-ash-800 truncate font-medium">
@@ -227,7 +211,7 @@ export const DecisionHeroCard: React.FC<DecisionHeroCardProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-emerald-200 text-emerald-900 border border-emerald-300 shrink-0">
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold bg-emerald-200 text-emerald-900 border border-emerald-300 shrink-0">
                     BUSINESS SAFE
                   </span>
                   <span className="text-emerald-900 truncate font-semibold">
@@ -245,7 +229,7 @@ export const DecisionHeroCard: React.FC<DecisionHeroCardProps> = ({
               {suggestedAlternative.canApply && suggestedAlternative.targetPresetId && onApplyAlternative && (
                 <button
                   onClick={() => onApplyAlternative(suggestedAlternative.targetPresetId!)}
-                  className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-mono font-bold shadow-subtle transition-all active:scale-[0.98] cursor-pointer"
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-mono font-semibold shadow-subtle transition-all active:scale-[0.98] cursor-pointer"
                   title="Apply this recommended alternative scenario immediately"
                 >
                   <span>Apply Fix</span>
@@ -259,7 +243,6 @@ export const DecisionHeroCard: React.FC<DecisionHeroCardProps> = ({
         {/* Bottom Statistical Ribbon */}
         <div className="pt-2 border-t border-canvas-border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-mono text-ash-500">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-3 h-3 text-brand-orange" />
             <span>Wilson CI (95%): <strong className="text-ash-700">{proposedChange.confidenceLevel} ({proposedChange.confidenceScore}%)</strong></span>
             <span className="text-ash-300">•</span>
             <span>Deterministic Graph Traversal</span>

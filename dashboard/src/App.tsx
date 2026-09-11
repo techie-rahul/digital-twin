@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Layers, ShieldCheck, SlidersHorizontal } from 'lucide-react';
+import { Layers, ShieldCheck, SlidersHorizontal, Server } from 'lucide-react';
 import { Header } from './components/Header';
 import { DemoPresetBar } from './components/DemoPresetBar';
 import { DecisionHeroCard } from './components/DecisionHeroCard';
@@ -699,8 +699,8 @@ export const App: React.FC = () => {
               <div className="rounded-2xl bg-white border border-canvas-border p-4 shadow-subtle space-y-3.5">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-canvas-border">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-base shadow-subtle">
-                      {currentTwinId.includes('easy') ? '☁️' : currentTwinId.includes('medium') ? '💳' : currentTwinId.includes('hospital') ? '🏥' : '🌐'}
+                    <div className="w-8 h-8 rounded-lg bg-ash-900 text-white flex items-center justify-center font-semibold text-sm shadow-subtle shrink-0">
+                      <Server className="w-4 h-4 text-ash-200" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -710,7 +710,7 @@ export const App: React.FC = () => {
                            currentTwinId === 'twin-medicare-hospital' ? 'Medicare Regional Hospital & Telehealth (Custom)' :
                            'GlobalBank Enterprise Tier-0 Benchmark (Hard)'}
                         </span>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-ash-100 text-ash-700 border border-ash-200">
                           {effectiveAssets.length} Assets • {effectiveEdges.length} Edges • {twin?.controls.length} Controls
                         </span>
                       </div>
@@ -722,7 +722,7 @@ export const App: React.FC = () => {
 
                   {/* Actions & Threat Actor Profile Selector */}
                   <div className="flex items-center gap-2.5 self-start md:self-auto flex-wrap">
-                    <span className="text-[11px] font-mono font-bold text-ash-400 uppercase">Threat Actor:</span>
+                    <span className="text-[11px] font-mono font-medium text-ash-500 uppercase">Threat Actor:</span>
                     <div className="inline-flex rounded-lg bg-ash-100 p-0.5 border border-ash-200">
                       <button
                         onClick={() => setSelectedAdversaryId('agent-external')}
@@ -732,7 +732,7 @@ export const App: React.FC = () => {
                             : 'text-ash-500 hover:text-ash-800'
                         }`}
                       >
-                        🌐 External Attacker (DMZ)
+                        External (DMZ)
                       </button>
                       <button
                         onClick={() => setSelectedAdversaryId('agent-insider')}
@@ -742,7 +742,7 @@ export const App: React.FC = () => {
                             : 'text-ash-500 hover:text-ash-800'
                         }`}
                       >
-                        👤 Malicious Insider (Corp)
+                        Insider (Corp)
                       </button>
                     </div>
                   </div>
@@ -788,15 +788,15 @@ export const App: React.FC = () => {
                     <button
                       onClick={handleRunSimulation}
                       disabled={isSimulating}
-                      className="px-3.5 py-1.5 rounded-lg bg-brand-orange hover:bg-brand-orange-hover text-white text-xs font-mono font-bold flex items-center gap-1.5 shadow-subtle transition-all cursor-pointer disabled:opacity-50"
+                      className="px-3.5 py-1.5 rounded-lg bg-brand-orange hover:bg-brand-orange-hover text-white text-xs font-mono font-semibold flex items-center gap-1.5 shadow-subtle transition-all cursor-pointer disabled:opacity-50"
                     >
-                      <span>⚡ Run Breach Simulation</span>
+                      <span>Run Breach Simulation</span>
                     </button>
                     <button
                       onClick={() => handleSelectScenario('twin-finbank-golden')}
-                      className="px-3 py-1.5 rounded-lg bg-white hover:bg-ash-50 text-ash-600 hover:text-ash-900 border border-ash-200 text-xs font-medium shadow-xs transition-all cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg bg-white hover:bg-ash-50 text-ash-700 hover:text-ash-900 border border-ash-200 text-xs font-medium shadow-xs transition-all cursor-pointer"
                     >
-                      ← FinBank Golden
+                      Baseline Scenario
                     </button>
                   </div>
                 </div>
@@ -964,7 +964,7 @@ export const App: React.FC = () => {
           <span>Deterministic Seed: <strong className="text-brand-orange">42</strong></span>
         </div>
         <div>
-          <span>Security Change Sandbox • Digital Twin Model PS #13</span>
+          <span>Orchestra • Deterministic Security Evaluation</span>
         </div>
       </footer>
     </div>
