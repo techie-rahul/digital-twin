@@ -1,0 +1,290 @@
+{
+  "id": "twin-neobank-medium",
+  "assets": [
+    {
+      "id": "internet",
+      "name": "Public Ingress Gateway",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 1,
+      "crown_jewel": false
+    },
+    {
+      "id": "api-gateway",
+      "name": "Kong API Gateway & Rate Limiter",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "auth-idp",
+      "name": "Keycloak OIDC Identity Provider",
+      "kind": "server",
+      "zone": "corp",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "ws-engineer",
+      "name": "Lead SRE DevOps Workstation",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "ci-pipeline",
+      "name": "ArgoCD / GitHub Actions Runner",
+      "kind": "server",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "bastion-mgmt",
+      "name": "Hardened Teleport Bastion Host",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "ledger-service",
+      "name": "Card Authorization Settlement API",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "redis-queue",
+      "name": "Kafka / Redis Event Stream Bus",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "core-ledger-db",
+      "name": "Immutable Double-Entry Financial DB",
+      "kind": "database",
+      "zone": "prod",
+      "criticality": 5,
+      "crown_jewel": true
+    },
+    {
+      "id": "s3-archive",
+      "name": "S3 Compliance & Disaster Recovery Vault",
+      "kind": "share",
+      "zone": "mgmt",
+      "criticality": 4,
+      "crown_jewel": true
+    }
+  ],
+  "identities": [
+    {
+      "id": "id-user-fintech",
+      "name": "Mobile Banking End-User",
+      "kind": "user",
+      "tier": 3
+    },
+    {
+      "id": "id-sre-lead",
+      "name": "Principal Site Reliability Engineer",
+      "kind": "user",
+      "tier": 2
+    },
+    {
+      "id": "id-cloud-sec",
+      "name": "Cloud Security Administrator",
+      "kind": "admin",
+      "tier": 0
+    },
+    {
+      "id": "id-svc-settle",
+      "name": "Automated Settlement Engine Principal",
+      "kind": "service_account",
+      "tier": 1
+    }
+  ],
+  "edges": [
+    {
+      "src": "internet",
+      "dst": "api-gateway",
+      "technique": "exploit_public_app"
+    },
+    {
+      "src": "api-gateway",
+      "dst": "auth-idp",
+      "technique": "db_login"
+    },
+    {
+      "src": "api-gateway",
+      "dst": "ledger-service",
+      "technique": "db_login"
+    },
+    {
+      "src": "ws-engineer",
+      "dst": "ci-pipeline",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "ws-engineer",
+      "dst": "bastion-mgmt",
+      "technique": "rdp_lateral"
+    },
+    {
+      "src": "ci-pipeline",
+      "dst": "bastion-mgmt",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "bastion-mgmt",
+      "dst": "core-ledger-db",
+      "technique": "rdp_lateral"
+    },
+    {
+      "src": "bastion-mgmt",
+      "dst": "s3-archive",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "ledger-service",
+      "dst": "redis-queue",
+      "technique": "db_login"
+    },
+    {
+      "src": "ledger-service",
+      "dst": "core-ledger-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-cloud-sec",
+      "dst": "bastion-mgmt",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-sre-lead",
+      "dst": "ws-engineer",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-svc-settle",
+      "dst": "ledger-service",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-user-fintech",
+      "dst": "api-gateway",
+      "technique": "db_login"
+    }
+  ],
+  "flows": [
+    {
+      "id": "F1",
+      "name": "Customer Mobile Payment Requests",
+      "src": "internet",
+      "dst": "api-gateway",
+      "technique": "exploit_public_app",
+      "criticality": 3
+    },
+    {
+      "id": "F2",
+      "name": "OIDC Token Authorization Verification",
+      "src": "api-gateway",
+      "dst": "auth-idp",
+      "technique": "db_login",
+      "criticality": 4
+    },
+    {
+      "id": "F3",
+      "name": "Core Banking Ledger Transaction Commits",
+      "src": "ledger-service",
+      "dst": "core-ledger-db",
+      "technique": "db_login",
+      "criticality": 5
+    },
+    {
+      "id": "F4",
+      "name": "DevOps Automated Infrastructure CD Deployments",
+      "src": "ws-engineer",
+      "dst": "ci-pipeline",
+      "technique": "ssh_lateral",
+      "criticality": 3
+    },
+    {
+      "id": "F5",
+      "name": "Nightly Encrypted Disaster Recovery Snapshot",
+      "src": "bastion-mgmt",
+      "dst": "s3-archive",
+      "technique": "ssh_lateral",
+      "criticality": 4
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-mfa-bastion",
+      "name": "FIDO2 Hardware MFA on Teleport Bastion",
+      "cost": 1500,
+      "blocks": [
+        "rdp_lateral",
+        "ssh_lateral",
+        "T1021.001",
+        "T1021.004"
+      ],
+      "scope": [
+        "bastion-mgmt"
+      ],
+      "efficacy": 0.95
+    },
+    {
+      "id": "ctrl-payment-seg",
+      "name": "Payment Subnet Zero-Trust Microsegmentation",
+      "cost": 2500,
+      "blocks": [
+        "db_login",
+        "ssh_lateral",
+        "rdp_lateral",
+        "T1078",
+        "T1021.001"
+      ],
+      "scope": [
+        "core-ledger-db",
+        "s3-archive"
+      ],
+      "efficacy": 0.90
+    },
+    {
+      "id": "ctrl-host-edr",
+      "name": "CrowdStrike Falcon Host EDR Protection",
+      "cost": 2000,
+      "blocks": [
+        "cred_dump",
+        "priv_esc_local",
+        "T1003",
+        "T1068"
+      ],
+      "scope": [
+        "ws-engineer",
+        "ci-pipeline"
+      ],
+      "efficacy": 0.85
+    },
+    {
+      "id": "ctrl-credguard",
+      "name": "Windows Credential Guard & LSA Isolation",
+      "cost": 1000,
+      "blocks": [
+        "cred_dump",
+        "T1003"
+      ],
+      "scope": [
+        "ws-engineer",
+        "bastion-mgmt"
+      ],
+      "efficacy": 0.90
+    }
+  ],
+  "parent_id": null
+}

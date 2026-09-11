@@ -1,0 +1,145 @@
+[
+  {
+    "id": "evi_seed_1",
+    "finding_id": "finding_seed_1",
+    "title": "Telemetry Evidence: Public Database Exposure: Production PostgreSQL on Port 5432",
+    "evidence_type": "config_snapshot",
+    "source": "exposure_agent",
+    "confidence": 0.99,
+    "raw_data": "{\"finding\": \"Public Database Exposure: Production PostgreSQL on Port 5432\", \"assets\": [\"rds-postgres-prod\", \"data-customer-pii\"]}",
+    "summary": "AWS RDS instance 'production-postgres-01' has PubliclyAccessible=True and security group ingress allows 0.0.0.0/0 on port 5432.",
+    "timestamp": "2026-09-11 10:57:58.786263"
+  },
+  {
+    "id": "evi_seed_2",
+    "finding_id": "finding_seed_2",
+    "title": "Telemetry Evidence: Dormant Administrator Account: Dev Ops Admin (Contractor)",
+    "evidence_type": "config_snapshot",
+    "source": "identity_agent",
+    "confidence": 0.99,
+    "raw_data": "{\"finding\": \"Dormant Administrator Account: Dev Ops Admin (Contractor)\", \"assets\": [\"user-contractor-admin\", \"iam-admin-role\"]}",
+    "summary": "Identity 'dev.admin@acmeretail.example' has AdministratorAccess IAM role, last login 142 days ago, and MFA is disabled.",
+    "timestamp": "2026-09-11 10:57:58.787395"
+  },
+  {
+    "id": "evi_seed_3",
+    "finding_id": "finding_seed_3",
+    "title": "Telemetry Evidence: Administrator Account Missing MFA: Dev Ops Admin",
+    "evidence_type": "config_snapshot",
+    "source": "identity_agent",
+    "confidence": 0.98,
+    "raw_data": "{\"finding\": \"Administrator Account Missing MFA: Dev Ops Admin\", \"assets\": [\"user-contractor-admin\"]}",
+    "summary": "Account 'dev.admin@acmeretail.example' has administrative privileges but no TOTP or hardware FIDO2 factor configured.",
+    "timestamp": "2026-09-11 10:57:58.788548"
+  },
+  {
+    "id": "evi_seed_4",
+    "finding_id": "finding_seed_4",
+    "title": "Telemetry Evidence: Unused Third-Party OAuth Integration Retains Data Write Access",
+    "evidence_type": "config_snapshot",
+    "source": "third_party_agent",
+    "confidence": 0.95,
+    "raw_data": "{\"finding\": \"Unused Third-Party OAuth Integration Retains Data Write Access\", \"assets\": [\"saas-analytics-bot\"]}",
+    "summary": "Legacy Marketing Analytics Bot OAuth client has inactive_days=95 with scopes ['admin.directory.user.readonly', 'drive.file.write'].",
+    "timestamp": "2026-09-11 10:57:58.789545"
+  },
+  {
+    "id": "evi_seed_5",
+    "finding_id": "finding_seed_5",
+    "title": "Telemetry Evidence: Weak Email Security: DMARC Policy Set to 'none'",
+    "evidence_type": "config_snapshot",
+    "source": "exposure_agent",
+    "confidence": 0.95,
+    "raw_data": "{\"finding\": \"Weak Email Security: DMARC Policy Set to 'none'\", \"assets\": [\"dns-dmarc-record\"]}",
+    "summary": "DNS TXT record _dmarc.acmeretail.example specifies 'p=none' without rejection or quarantine enforcement.",
+    "timestamp": "2026-09-11 10:57:58.789545"
+  },
+  {
+    "id": "evi_d879d8296b",
+    "finding_id": "find_369cd40878",
+    "title": "Evidence for Vulnerable Dependency in Application: lodash@4.17.20",
+    "evidence_type": "agent_observation",
+    "source": "sbom_agent",
+    "confidence": 0.98,
+    "raw_data": "{\"cve\": \"CVE-2021-23337\", \"cvss\": 7.5, \"fixed_in\": \"4.17.21\", \"component\": \"lodash@4.17.20\"}",
+    "summary": "lodash@4.17.20 is vulnerable to CVE-2021-23337 (CVSS 7.5, CWE-78). Prototype pollution in lodash leads to remote code execution or denial of service.",
+    "timestamp": "2026-09-11 11:03:54.282334"
+  },
+  {
+    "id": "evi_5de653316b",
+    "finding_id": "find_bdfb4d23ff",
+    "title": "Evidence for Vulnerable Dependency in Application: jsonwebtoken@8.5.1",
+    "evidence_type": "agent_observation",
+    "source": "sbom_agent",
+    "confidence": 0.98,
+    "raw_data": "{\"cve\": \"CVE-2022-23529\", \"cvss\": 9.8, \"fixed_in\": \"9.0.0\", \"component\": \"jsonwebtoken@8.5.1\"}",
+    "summary": "jsonwebtoken@8.5.1 is vulnerable to CVE-2022-23529 (CVSS 9.8, CWE-94). Arbitrary code execution through untrusted key objects in jsonwebtoken verify function.",
+    "timestamp": "2026-09-11 11:03:54.286786"
+  },
+  {
+    "id": "evi_6799b37507",
+    "finding_id": "find_863733398d",
+    "title": "Evidence for Vulnerable Dependency in Application: express@4.18.2",
+    "evidence_type": "agent_observation",
+    "source": "sbom_agent",
+    "confidence": 0.98,
+    "raw_data": "{\"cve\": \"CVE-2024-43796\", \"cvss\": 5.3, \"fixed_in\": \"4.21.0\", \"component\": \"express@4.18.2\"}",
+    "summary": "express@4.18.2 is vulnerable to CVE-2024-43796 (CVSS 5.3, CWE-79). Open redirect and cross-site scripting via malformed path handling.",
+    "timestamp": "2026-09-11 11:03:54.289616"
+  },
+  {
+    "id": "evi_752b556a87",
+    "finding_id": "find_a1949d59da",
+    "title": "Evidence for Vulnerable Dependency in Application: axios@1.5.0",
+    "evidence_type": "agent_observation",
+    "source": "sbom_agent",
+    "confidence": 0.98,
+    "raw_data": "{\"cve\": \"CVE-2023-45857\", \"cvss\": 6.5, \"fixed_in\": \"1.6.0\", \"component\": \"axios@1.5.0\"}",
+    "summary": "axios@1.5.0 is vulnerable to CVE-2023-45857 (CVSS 6.5, CWE-444). Cross-Site Request Forgery (CSRF) vulnerability via absolute URLs.",
+    "timestamp": "2026-09-11 11:03:54.291629"
+  },
+  {
+    "id": "evi_22b07aa0e1",
+    "finding_id": "find_d8d1864c6e",
+    "title": "Evidence for Extensive Blast Radius: Compromise of ecommerce-api Reaches Sensitive Data",
+    "evidence_type": "agent_observation",
+    "source": "blast_radius_agent",
+    "confidence": 0.96,
+    "raw_data": "{\"blast_radius\": {\"origin_node_id\": \"app-ecommerce-api\", \"origin_node_name\": \"ecommerce-api\", \"level\": \"CRITICAL\", \"directly_affected_count\": 8, \"indirectly_affected_count\": 6, \"sensitive_data_reachable\": true, \"directly_affected_nodes\": [{\"id\": \"dep-lodash-4.17.20\", \"name\": \"lodash@4.17.20\", \"type\": \"Dependency\", \"source\": \"sbom\", \"environment\": \"production\", \"owner\": null, \"confidence\": 1.0, \"risk_level\": \"HIGH\", \"is_internet_facing\": false, \"has_sensitive_data\": false, \"tags\": [\"npm\", \"license:MIT\"], \"metadata_json\": {\"purl\": \"pkg:npm/lodash@4.17.20\", \"license\": \"MIT\", \"has_vulnerabilities\": true, \"vulnerabilities\": [{\"cve\": \"CVE-2021-23337\", \"cvss\": 7.5, \"severity\": \"HIGH\", \"cwe\": \"CWE-78\", \"affected_versions\": \"<4.17.21\", \"summary\": \"Prototype pollution in lodash leads to remote code execution or denial of service.\", \"fixed_in\": \"4.17.21\"}]}}, {\"id\": \"srv-k8s-cluster\", \"name\": \"EKS Production Cluster\", \"type\": \"Container\", \"source\": \"aws\", \"environment\": \"production\", \"owner\": \"devops@acmeretail.example\", \"confidence\": 1.0, \"risk_level\": \"LOW\", \"is_internet_facing\": false, \"has_sensitive_data\": false, \"tags\": [], \"metadata_json\": {\"nodes\": 3, \"k8s_version\": \"1.29\"}}, {\"id\": \"dep-express-4.18.2\", \"name\": \"express@4.18.2\", \"type\": \"Dependency\", \"source\": \"sbom\", \"environment\": \"production\", \"owner\": null, \"confidence\": 1.0, \"risk_level\": \"HIGH\", \"is_internet_facing\": false, \"has_sensitive_data\": false, \"tags\": [\"npm\", \"license:MIT\"], \"metadata_json\": {\"purl\": \"pkg:npm/express@4.18.2\", \"license\": \"MIT\", \"has_vulnerabilities\": true, \"vulnerabilities\": [{\"cve\": \"CVE-2024-43796\", \"cvss\": 5.3, \"severity\": \"MEDIUM\", \"cwe\": \"CWE-79\", \"affected_versions\": \"<4.20.0\", \"summary\": \"Open redirect and cross-site scripting via malformed path handling.\", \"fixed_in\": \"4.21.0\"}]}}, {\"id\": \"dep-axios-1.5.0\", \"name\": \"axios@1.5.0\", \"type\": \"Dependency\", \"source\": \"sbom\", \"environment\": \"production\", \"owner\": null, \"confidence\": 1.0, \"risk_level\": \"HIGH\", \"is_internet_facing\": false, \"has_sensitive_data\": false, \"tags\": [\"npm\", \"license:MIT\"], \"metadata_json\": {\"purl\": \"pkg:npm/axios@1.5.0\", \"license\": \"MIT\", \"has_vulnerabilities\": true, \"vulnerabilities\": [{\"cve\": \"CVE-2023-45857\", \"cvss\": 6.5, \"severity\": \"MEDIUM\", \"cwe\": \"CWE-444\", \"affected_versions\": \"<1.6.0\", \"summary\": \"Cross-Site Request Forgery (CSRF) vulnerability via absolute URLs.\", \"fixed_in\": \"1.6.0\"}]}}, {\"id\": \"dep-jsonwebtoken-8.5.1\", \"name\": \"jsonwebtoken@8.5.1\", \"type\": \"Dependency\", \"source\": \"sbom\", \"environment\": \"production\", \"owner\": null, \"confidence\": 1.0, \"risk_level\": \"CRITICAL\", \"is_internet_facing\": false, \"has_sensitive_data\": false, \"tags\": [\"npm\", \"license:MIT\"], \"metadata_json\": {\"purl\": \"pkg:npm/jsonwebtoken@8.5.1\", \"license\": \"MIT\", \"has_vulnerabilities\": true, \"vulnerabilities\": [{\"cve\": \"CVE-2022-23529\", \"cvss\": 9.8, \"severity\": \"CRITICAL\", \"cwe\": \"CWE-94\", \"affected_versions\": \"<=8.5.1\", \"summary\": \"Arbitrary code execution through untrusted key objects in jsonwebtoken verify function.\", \"fixed_in\": \"9.0.0\"}]}}, {\"id\": \"app-payment-service\", \"name\": \"payment-service\", \"type\": \"Service\", \"source\": \"github\", \"environment\": \"production\", \"owner\": \"sarah.tech@acmeretail.example\", \"confidence\": 1.0, \"risk_level\": \"HIGH\", \"is_internet_facing\": false, \"has_sensitive_data\": true, \"tags\": [\"pci-dss\", \"payments\"], \"metadata_json\": {\"processor\": \"Stripe API\"}}, {\"id\": \"rds-postgres-prod\", \"name\": \"Production PostgreSQL (Port 5432)\", \"type\": \"Database\", \"source\": \"aws\", \"environment\": \"production\", \"owner\": \"devops@acmeretail.example\", \"confidence\": 1.0, \"risk_level\": \"CRITICAL\", \"is_internet_facing\": true, \"has_sensitive_data\": true, \"tags\": [\"rds\", \"postgres\", \"customer-pii\"], \"metadata_json\": {\"port\": 5432, \"publicly_accessible\": true, \"endpoint\": \"acme-prod-db.c91a.us-east-1.rds.amazonaws.com\", \"tables\": [\"customers\", \"orders\", \"payment_tokens\", \"user_credentials\"]}}, {\"id\": \"s3-product-images\", \"name\": \"acme-product-images\", \"type\": \"StorageBucket\", \"source\": \"aws\", \"environment\": \"production\", \"owner\": \"sarah.tech@acmeretail.example\", \"confidence\": 1.0, \"risk_level\": \"LOW\", \"is_internet_facing\": true, \"has_sensitive_data\": false, \"tags\": [\"public-cdn\"], \"metadata_json\": {\"public_read\": true}}], \"indirectly_affected_nodes\": [{\"id\": \"data-customer-pii\", \"name\": \"Customer PII & Order Records\", \"type\": \"DataAsset\", \"source\": \"discovery\", \"environment\": \"production\", \"owner\": \"alex.founder@acmeretail.example\", \"confidence\": 1.0, \"risk_level\": \"CRITICAL\", \"is_internet_facing\": false, \"has_sensitive_data\": true, \"tags\": [\"gdpr\", \"ccpa\", \"crown-jewel\"], \"metadata_json\": {\"record_count\": 84200, \"classification\": \"Confidential\"}}, {\"id\": \"vuln-CVE-2021-23337\", \"name\": \"CVE-2021-23337\", \"type\": \"Vulnerability\", \"source\": \"cve_intel\", \"environment\": \"production\", \"owner\": null, \"confidence\": 0.98, \"risk_level\": \"HIGH\", \"is_internet_facing\": false, \"has_sensitive_data\": false, \"tags\": [\"CWE-78\", \"cvss:7.5\"], \"metadata_json\": {\"cve\": \"CVE-2021-23337\", \"cvss\": 7.5, \"severity\": \"HIGH\", \"cwe\": \"CWE-78\", \"affected_versions\": \"<4.17.21\", \"summary\": \"Prototype pollution in lodash leads to remote code execution or denial of service.\", \"fixed_in\": \"4.17.21\"}}, {\"id\": \"vuln-CVE-2022-23529\", \"name\": \"CVE-2022-23529\", \"type\": \"Vulnerability\", \"source\": \"cve_intel\", \"environment\": \"production\", \"owner\": null, \"confidence\": 0.98, \"risk_level\": \"CRITICAL\", \"is_internet_facing\": false, \"has_sensitive_data\": false, \"tags\": [\"CWE-94\", \"cvss:9.8\"], \"metadata_json\": {\"cve\": \"CVE-2022-23529\", \"cvss\": 9.8, \"severity\": \"CRITICAL\", \"cwe\": \"CWE-94\", \"affected_versions\": \"<=8.5.1\", \"summary\": \"Arbitrary code execution through untrusted key objects in jsonwebtoken verify function.\", \"fixed_in\": \"9.0.0\"}}, {\"id\": \"vuln-CVE-2024-43796\", \"name\": \"CVE-2024-43796\", \"type\": \"Vulnerability\", \"source\": \"cve_intel\", \"environment\": \"production\", \"owner\": null, \"confidence\": 0.98, \"risk_level\": \"MEDIUM\", \"is_internet_facing\": false, \"has_sensitive_data\": false, \"tags\": [\"CWE-79\", \"cvss:5.3\"], \"metadata_json\": {\"cve\": \"CVE-2024-43796\", \"cvss\": 5.3, \"severity\": \"MEDIUM\", \"cwe\": \"CWE-79\", \"affected_versions\": \"<4.20.0\", \"summary\": \"Open redirect and cross-site scripting via malformed path handling.\", \"fixed_in\": \"4.21.0\"}}, {\"id\": \"s3-customer-backups\", \"name\": \"acme-database-backups\", \"type\": \"StorageBucket\", \"source\": \"aws\", \"environment\": \"production\", \"owner\": \"devops@acmeretail.example\", \"confidence\": 1.0, \"risk_level\": \"MEDIUM\", \"is_internet_facing\": false, \"has_sensitive_data\": true, \"tags\": [\"aws-s3\", \"backups\", \"encrypted\"], \"metadata_json\": {\"versioning\": true, \"encryption\": \"AES-256\"}}, {\"id\": \"vuln-CVE-2023-45857\", \"name\": \"CVE-2023-45857\", \"type\": \"Vulnerability\", \"source\": \"cve_intel\", \"environment\": \"production\", \"owner\": null, \"confidence\": 0.98, \"risk_level\": \"MEDIUM\", \"is_internet_facing\": false, \"has_sensitive_data\": false, \"tags\": [\"CWE-444\", \"cvss:6.5\"], \"metadata_json\": {\"cve\": \"CVE-2023-45857\", \"cvss\": 6.5, \"severity\": \"MEDIUM\", \"cwe\": \"CWE-444\", \"affected_versions\": \"<1.6.0\", \"summary\": \"Cross-Site Request Forgery (CSRF) vulnerability via absolute URLs.\", \"fixed_in\": \"1.6.0\"}}], \"data_assets_compromised\": [\"payment-service\", \"Production PostgreSQL (Port 5432)\", \"acme-product-images\", \"Customer PII & Order Records\", \"acme-database-backups\"], \"attack_paths\": [[\"app-ecommerce-api\", \"dep-lodash-4.17.20\"], [\"app-ecommerce-api\", \"srv-k8s-cluster\"], [\"app-ecommerce-api\", \"dep-express-4.18.2\"], [\"app-ecommerce-api\", \"dep-axios-1.5.0\"], [\"app-ecommerce-api\", \"dep-jsonwebtoken-8.5.1\"], [\"app-ecommerce-api\", \"app-payment-service\"], [\"app-ecommerce-api\", \"rds-postgres-prod\"], [\"app-ecommerce-api\", \"s3-product-images\"]], \"business_impact_summary\": \"Compromise of ecommerce-api threatens 14 downstream assets. CRITICAL: Direct attack path to sensitive data assets: payment-service, Production PostgreSQL (Port 5432), acme-product-images, Customer PII & Order Records, acme-database-backups.\"}}",
+    "summary": "Asset 'ecommerce-api' (Application) maintains direct or transitive network/authorization relationships to high-value data nodes (payment-service, Production PostgreSQL (Port 5432), acme-product-images, Customer PII & Order Records, acme-database-backups) across 14 graph hops.",
+    "timestamp": "2026-09-11 11:03:54.291629"
+  },
+  {
+    "id": "evi_12ca6ed5ec",
+    "finding_id": "find_c936c699bf",
+    "title": "Evidence for Viable Attack Path: Production PostgreSQL (Port 5432) \u2192 acme-database-backups",
+    "evidence_type": "agent_observation",
+    "source": "attack_path_agent",
+    "confidence": 0.96,
+    "raw_data": "{\"path\": [{\"id\": \"rds-postgres-prod\", \"name\": \"Production PostgreSQL (Port 5432)\", \"type\": \"Database\", \"risk_level\": \"CRITICAL\", \"description\": null}, {\"id\": \"s3-customer-backups\", \"name\": \"acme-database-backups\", \"type\": \"StorageBucket\", \"risk_level\": \"MEDIUM\", \"description\": null}], \"risk_score\": 95.0, \"choke_point\": \"intermediate gateway\"}",
+    "summary": "Graph traversal detected an unblocked 2-hop path: Production PostgreSQL (Port 5432) -> acme-database-backups. Choke point identified at 'intermediate gateway'.",
+    "timestamp": "2026-09-11 11:03:54.293623"
+  },
+  {
+    "id": "evi_28a43fe81e",
+    "finding_id": "find_a912f4b100",
+    "title": "Evidence for Viable Attack Path: Production PostgreSQL (Port 5432) \u2192 Customer PII & Order Records",
+    "evidence_type": "agent_observation",
+    "source": "attack_path_agent",
+    "confidence": 0.96,
+    "raw_data": "{\"path\": [{\"id\": \"rds-postgres-prod\", \"name\": \"Production PostgreSQL (Port 5432)\", \"type\": \"Database\", \"risk_level\": \"CRITICAL\", \"description\": null}, {\"id\": \"data-customer-pii\", \"name\": \"Customer PII & Order Records\", \"type\": \"DataAsset\", \"risk_level\": \"CRITICAL\", \"description\": null}], \"risk_score\": 95.0, \"choke_point\": \"intermediate gateway\"}",
+    "summary": "Graph traversal detected an unblocked 2-hop path: Production PostgreSQL (Port 5432) -> Customer PII & Order Records. Choke point identified at 'intermediate gateway'.",
+    "timestamp": "2026-09-11 11:03:54.295531"
+  },
+  {
+    "id": "evi_a48888f4c2",
+    "finding_id": "find_ebb5a7cba8",
+    "title": "Evidence for Viable Attack Path: Public Internet \u2192 payment-service",
+    "evidence_type": "agent_observation",
+    "source": "attack_path_agent",
+    "confidence": 0.96,
+    "raw_data": "{\"path\": [{\"id\": \"node-internet\", \"name\": \"Public Internet\", \"type\": \"Domain\", \"risk_level\": \"LOW\", \"description\": null}, {\"id\": \"app-ecommerce-api\", \"name\": \"ecommerce-api\", \"type\": \"Application\", \"risk_level\": \"MEDIUM\", \"description\": null}, {\"id\": \"app-payment-service\", \"name\": \"payment-service\", \"type\": \"Service\", \"risk_level\": \"HIGH\", \"description\": null}], \"risk_score\": 85.0, \"choke_point\": \"ecommerce-api\"}",
+    "summary": "Graph traversal detected an unblocked 3-hop path: Public Internet -> ecommerce-api -> payment-service. Choke point identified at 'ecommerce-api'.",
+    "timestamp": "2026-09-11 11:03:54.300551"
+  }
+]

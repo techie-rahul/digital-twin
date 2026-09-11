@@ -1,0 +1,47 @@
+id,organization_id,format,spec_version,serial_number,application_name,version,total_components,vulnerable_components,created_at,raw_content
+sbom_e586e4d7af4d,org-acme-01,CycloneDX,1.4,,ecommerce-api,1.2.0,4,4,2026-09-11 11:03:54.162037,"{
+  ""bomFormat"": ""CycloneDX"",
+  ""specVersion"": ""1.4"",
+  ""metadata"": {
+    ""component"": {
+      ""name"": ""ecommerce-api"",
+      ""version"": ""1.2.0"",
+      ""type"": ""application""
+    }
+  },
+  ""components"": [
+    {
+      ""name"": ""lodash"",
+      ""version"": ""4.17.20"",
+      ""purl"": ""pkg:npm/lodash@4.17.20"",
+      ""licenses"": [{""license"": {""id"": ""MIT""}}]
+    },
+    {
+      ""name"": ""jsonwebtoken"",
+      ""version"": ""8.5.1"",
+      ""purl"": ""pkg:npm/jsonwebtoken@8.5.1"",
+      ""licenses"": [{""license"": {""id"": ""MIT""}}]
+    },
+    {
+      ""name"": ""express"",
+      ""version"": ""4.18.2"",
+      ""purl"": ""pkg:npm/express@4.18.2"",
+      ""licenses"": [{""license"": {""id"": ""MIT""}}]
+    },
+    {
+      ""name"": ""axios"",
+      ""version"": ""1.5.0"",
+      ""purl"": ""pkg:npm/axios@1.5.0"",
+      ""licenses"": [{""license"": {""id"": ""MIT""}}]
+    }
+  ]
+}"
+sbom_bedadf34c910,org-acme-01,CycloneDX,1.4,,ecommerce-api,1.2.0,2,2,2026-09-11 11:04:42.979232,"{
+          ""bomFormat"": ""CycloneDX"",
+          ""specVersion"": ""1.4"",
+          ""metadata"": { ""component"": { ""name"": ""ecommerce-api"", ""version"": ""1.2.0"" } },
+          ""components"": [
+            { ""name"": ""lodash"", ""version"": ""4.17.20"", ""purl"": ""pkg:npm/lodash@4.17.20"", ""licenses"": [{""license"": {""id"": ""MIT""}}] },
+            { ""name"": ""jsonwebtoken"", ""version"": ""8.5.1"", ""purl"": ""pkg:npm/jsonwebtoken@8.5.1"" }
+          ]
+        }"

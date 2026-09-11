@@ -24,6 +24,7 @@ class SimulateRequest(BaseModel):
     n: int = Field(100, ge=1, le=2000, description="Number of Monte Carlo trials.")
     seed: int = Field(42, description="Deterministic RNG seed.")
     target: Optional[str] = Field(None, description="Target asset ID. Defaults to crown jewel.")
+    control_ids: List[str] = Field(default_factory=list, description="Optional active control IDs to simulate with.")
 
 
 class CloneRequest(BaseModel):

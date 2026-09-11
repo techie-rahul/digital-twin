@@ -1,0 +1,492 @@
+{
+  "id": "twin-globalbank-hard",
+  "assets": [
+    {
+      "id": "ext-waf-us",
+      "name": "North America Edge WAF & Reverse Proxy",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "ext-waf-eu",
+      "name": "European OpenBanking PSD2 Gateway",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "portal-cluster",
+      "name": "Global Retail Banking Portal Microservices",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "ws-trader",
+      "name": "High-Frequency FX Trading Desk Terminal",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "ws-analyst",
+      "name": "AML & Financial Crime Investigator PC",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "ws-sysadmin",
+      "name": "Tier-1 IT Infrastructure Support PC",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "corp-fileshare",
+      "name": "Enterprise Document NetApp Storage Share",
+      "kind": "share",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "ci-cluster",
+      "name": "Enterprise GitLab CI/CD Orchestrator",
+      "kind": "server",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "activedir-dc",
+      "name": "Tier-0 Primary Active Directory Domain Controller",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 5,
+      "crown_jewel": true
+    },
+    {
+      "id": "cyberark-vault",
+      "name": "CyberArk Enterprise Privileged Access Vault",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 5,
+      "crown_jewel": false
+    },
+    {
+      "id": "jumpbox-mgmt",
+      "name": "Global Operations Bastion Jump Host",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "siem-collector",
+      "name": "Splunk Enterprise SIEM Event Collector",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "swift-gateway",
+      "name": "SWIFT Alliance Clearing & Messaging Engine",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 5,
+      "crown_jewel": true
+    },
+    {
+      "id": "payment-api",
+      "name": "Core Real-Time Transaction Routing API",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "settle-engine",
+      "name": "Overnight ACH & Interbank Settlement Service",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "core-ledger-db",
+      "name": "Tier-0 Core Banking Master Ledger Database",
+      "kind": "database",
+      "zone": "prod",
+      "criticality": 5,
+      "crown_jewel": true
+    },
+    {
+      "id": "hsm-vault",
+      "name": "Hardware Security Module (HSM) Key Vault",
+      "kind": "database",
+      "zone": "prod",
+      "criticality": 5,
+      "crown_jewel": true
+    },
+    {
+      "id": "dr-backup-site",
+      "name": "Disaster Recovery Geographically Replicated Vault",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 5,
+      "crown_jewel": true
+    }
+  ],
+  "identities": [
+    {
+      "id": "id-user-retail",
+      "name": "Retail Consumer Identity",
+      "kind": "user",
+      "tier": 3
+    },
+    {
+      "id": "id-trader-fx",
+      "name": "Institutional FX Broker Identity",
+      "kind": "user",
+      "tier": 2
+    },
+    {
+      "id": "id-admin-domain",
+      "name": "Global Enterprise Domain Administrator",
+      "kind": "admin",
+      "tier": 0
+    },
+    {
+      "id": "id-sec-ops",
+      "name": "SOC Lead Incident Responder",
+      "kind": "admin",
+      "tier": 1
+    },
+    {
+      "id": "id-svc-swift",
+      "name": "SWIFT Alliance Protocol Service Account",
+      "kind": "service_account",
+      "tier": 1
+    },
+    {
+      "id": "id-svc-ledger",
+      "name": "Core Banking Financial Database Service Account",
+      "kind": "service_account",
+      "tier": 1
+    }
+  ],
+  "edges": [
+    {
+      "src": "ext-waf-us",
+      "dst": "portal-cluster",
+      "technique": "exploit_public_app"
+    },
+    {
+      "src": "ext-waf-eu",
+      "dst": "portal-cluster",
+      "technique": "exploit_public_app"
+    },
+    {
+      "src": "portal-cluster",
+      "dst": "payment-api",
+      "technique": "db_login"
+    },
+    {
+      "src": "ws-trader",
+      "dst": "payment-api",
+      "technique": "db_login"
+    },
+    {
+      "src": "ws-trader",
+      "dst": "corp-fileshare",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "ws-analyst",
+      "dst": "corp-fileshare",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "ws-sysadmin",
+      "dst": "ci-cluster",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "ws-sysadmin",
+      "dst": "jumpbox-mgmt",
+      "technique": "rdp_lateral"
+    },
+    {
+      "src": "ci-cluster",
+      "dst": "jumpbox-mgmt",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "corp-fileshare",
+      "dst": "ws-sysadmin",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "jumpbox-mgmt",
+      "dst": "cyberark-vault",
+      "technique": "rdp_lateral"
+    },
+    {
+      "src": "cyberark-vault",
+      "dst": "activedir-dc",
+      "technique": "rdp_lateral"
+    },
+    {
+      "src": "jumpbox-mgmt",
+      "dst": "siem-collector",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "jumpbox-mgmt",
+      "dst": "dr-backup-site",
+      "technique": "rdp_lateral"
+    },
+    {
+      "src": "activedir-dc",
+      "dst": "core-ledger-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "activedir-dc",
+      "dst": "swift-gateway",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "payment-api",
+      "dst": "settle-engine",
+      "technique": "db_login"
+    },
+    {
+      "src": "payment-api",
+      "dst": "swift-gateway",
+      "technique": "db_login"
+    },
+    {
+      "src": "settle-engine",
+      "dst": "core-ledger-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "swift-gateway",
+      "dst": "hsm-vault",
+      "technique": "db_login"
+    },
+    {
+      "src": "swift-gateway",
+      "dst": "core-ledger-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-admin-domain",
+      "dst": "cyberark-vault",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-sec-ops",
+      "dst": "jumpbox-mgmt",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-trader-fx",
+      "dst": "ws-trader",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-svc-swift",
+      "dst": "swift-gateway",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-svc-ledger",
+      "dst": "core-ledger-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-user-retail",
+      "dst": "portal-cluster",
+      "technique": "db_login"
+    }
+  ],
+  "flows": [
+    {
+      "id": "F1",
+      "name": "Global Retail Customer Banking Traffic",
+      "src": "ext-waf-us",
+      "dst": "portal-cluster",
+      "technique": "exploit_public_app",
+      "criticality": 3
+    },
+    {
+      "id": "F2",
+      "name": "OpenBanking API Transaction Integration",
+      "src": "ext-waf-eu",
+      "dst": "portal-cluster",
+      "technique": "exploit_public_app",
+      "criticality": 4
+    },
+    {
+      "id": "F3",
+      "name": "Payment Authorization & Fraud Scoring Bus",
+      "src": "portal-cluster",
+      "dst": "payment-api",
+      "technique": "db_login",
+      "criticality": 4
+    },
+    {
+      "id": "F4",
+      "name": "SWIFT Interbank Settlement Protocol",
+      "src": "payment-api",
+      "dst": "swift-gateway",
+      "technique": "db_login",
+      "criticality": 5
+    },
+    {
+      "id": "F5",
+      "name": "Core Banking Ledger Transaction Commits",
+      "src": "settle-engine",
+      "dst": "core-ledger-db",
+      "technique": "db_login",
+      "criticality": 5
+    },
+    {
+      "id": "F6",
+      "name": "Hardware Security Module Cryptographic Signing",
+      "src": "swift-gateway",
+      "dst": "hsm-vault",
+      "technique": "db_login",
+      "criticality": 5
+    },
+    {
+      "id": "F7",
+      "name": "Enterprise Document & Audit Record Sync",
+      "src": "ws-trader",
+      "dst": "corp-fileshare",
+      "technique": "smb_lateral",
+      "criticality": 3
+    },
+    {
+      "id": "F8",
+      "name": "Disaster Recovery Real-Time Mirroring",
+      "src": "jumpbox-mgmt",
+      "dst": "dr-backup-site",
+      "technique": "rdp_lateral",
+      "criticality": 4
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-pam-cyberark",
+      "name": "CyberArk Privileged Session & Credential Isolation",
+      "cost": 3500,
+      "blocks": [
+        "rdp_lateral",
+        "ssh_lateral",
+        "cred_dump",
+        "T1021.001",
+        "T1021.004",
+        "T1003"
+      ],
+      "scope": [
+        "cyberark-vault",
+        "activedir-dc"
+      ],
+      "efficacy": 0.95
+    },
+    {
+      "id": "ctrl-swift-seg",
+      "name": "SWIFT & Core Ledger PCI Microsegmentation",
+      "cost": 4000,
+      "blocks": [
+        "db_login",
+        "rdp_lateral",
+        "ssh_lateral",
+        "T1078",
+        "T1021.001"
+      ],
+      "scope": [
+        "swift-gateway",
+        "core-ledger-db",
+        "hsm-vault"
+      ],
+      "efficacy": 0.95
+    },
+    {
+      "id": "ctrl-mfa-bastion",
+      "name": "Tier-0 Hardware Token MFA Bastion Guard",
+      "cost": 2000,
+      "blocks": [
+        "rdp_lateral",
+        "ssh_lateral",
+        "T1021.001",
+        "T1021.004"
+      ],
+      "scope": [
+        "jumpbox-mgmt"
+      ],
+      "efficacy": 0.90
+    },
+    {
+      "id": "ctrl-edr-corp",
+      "name": "CrowdStrike Falcon Enterprise EDR & XDR",
+      "cost": 3000,
+      "blocks": [
+        "cred_dump",
+        "priv_esc_local",
+        "T1003",
+        "T1068"
+      ],
+      "scope": [
+        "ws-trader",
+        "ws-analyst",
+        "ws-sysadmin",
+        "ci-cluster"
+      ],
+      "efficacy": 0.85
+    },
+    {
+      "id": "ctrl-credguard-corp",
+      "name": "Windows Credential Guard Virtualization-Based Security",
+      "cost": 1500,
+      "blocks": [
+        "cred_dump",
+        "T1003"
+      ],
+      "scope": [
+        "ws-sysadmin",
+        "jumpbox-mgmt",
+        "ws-trader"
+      ],
+      "efficacy": 0.90
+    },
+    {
+      "id": "ctrl-waf-global",
+      "name": "F5 Distributed Cloud DDoS & API Armor",
+      "cost": 2500,
+      "blocks": [
+        "exploit_public_app",
+        "T1190"
+      ],
+      "scope": [
+        "ext-waf-us",
+        "ext-waf-eu",
+        "portal-cluster"
+      ],
+      "efficacy": 0.90
+    }
+  ],
+  "parent_id": null
+}

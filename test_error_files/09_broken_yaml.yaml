@@ -1,0 +1,11 @@
+
+# Broken YAML test file
+application:
+  name: "Broken App"
+  settings:
+	invalid_tab_character_indent: true
+  - missing_dict_key
+  duplicate_key: "first"
+  duplicate_key: "second"
+  broken_multiline: >
+    Unclosed quote: "this never ends

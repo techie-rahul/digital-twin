@@ -1,0 +1,11 @@
+[
+  {
+    "id": "org-acme-01",
+    "name": "Acme Retail",
+    "domain": "acmeretail.example",
+    "industry": "E-Commerce & Retail",
+    "employee_count": 24,
+    "created_at": "2026-09-11 10:57:58.770756",
+    "posture_score": 66.1
+  }
+]

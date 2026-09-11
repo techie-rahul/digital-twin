@@ -1,0 +1,4 @@
+id,organization_id,overall_score,category_scores,critical_findings_count,high_findings_count,medium_findings_count,low_findings_count,total_assets_count,event_trigger,timestamp
+snap_initial_01,org-acme-01,61.0,"{""Identity"": 55.0, ""Infrastructure"": 50.0, ""Application"": 85.0, ""Dependencies"": 90.0, ""Cloud"": 70.0, ""Third-Party"": 65.0}",2,2,1,0,20,INITIAL_IMPORT,2026-09-11 10:57:58.791223
+snap_8a9106ad7b,org-acme-01,66.1,"{""Identity"": 60.0, ""Infrastructure"": 20.0, ""Application"": 100.0, ""Dependencies"": 44.0, ""Cloud"": 100.0, ""Third-Party"": 85.0}",7,3,3,0,28,SBOM_ADDED,2026-09-11 11:03:54.337521
+snap_965b35a168,org-acme-01,66.1,"{""Identity"": 60.0, ""Infrastructure"": 20.0, ""Application"": 100.0, ""Dependencies"": 44.0, ""Cloud"": 100.0, ""Third-Party"": 85.0}",7,3,3,0,28,SBOM_ADDED,2026-09-11 11:04:43.029642

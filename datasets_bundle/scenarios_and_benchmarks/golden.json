@@ -1,0 +1,320 @@
+{
+  "id": "twin-finbank-golden",
+  "assets": [
+    {
+      "id": "internet",
+      "name": "External Internet Gateway",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 1,
+      "crown_jewel": false
+    },
+    {
+      "id": "web-dmz",
+      "name": "Online Banking Web DMZ",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "ws-dev",
+      "name": "Developer Workstation",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "ws-hr",
+      "name": "HR Operations Workstation",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "fileshare",
+      "name": "Corporate File Share",
+      "kind": "share",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "ci-runner",
+      "name": "CI/CD Build & Deployment Runner",
+      "kind": "server",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "jump-01",
+      "name": "Privileged Admin Jump Host",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "payroll-api",
+      "name": "Payroll & Payment Processing API",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "backup-01",
+      "name": "Disaster Recovery Backup Vault",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 4,
+      "crown_jewel": true
+    },
+    {
+      "id": "prod-db",
+      "name": "Core Production Database",
+      "kind": "database",
+      "zone": "prod",
+      "criticality": 5,
+      "crown_jewel": true
+    }
+  ],
+  "identities": [
+    {
+      "id": "id-user-customer",
+      "name": "Retail Banking Customer",
+      "kind": "user",
+      "tier": 3
+    },
+    {
+      "id": "id-user-analyst",
+      "name": "Financial Operations Analyst",
+      "kind": "user",
+      "tier": 2
+    },
+    {
+      "id": "id-user-admin",
+      "name": "Cloud Infrastructure Administrator",
+      "kind": "admin",
+      "tier": 0
+    },
+    {
+      "id": "id-svc-payroll",
+      "name": "Payroll Settlement Service Account",
+      "kind": "service_account",
+      "tier": 1
+    }
+  ],
+  "edges": [
+    {
+      "src": "internet",
+      "dst": "web-dmz",
+      "technique": "exploit_public_app"
+    },
+    {
+      "src": "web-dmz",
+      "dst": "payroll-api",
+      "technique": "db_login"
+    },
+    {
+      "src": "web-dmz",
+      "dst": "jump-01",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "ws-dev",
+      "dst": "fileshare",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "ws-dev",
+      "dst": "ci-runner",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "ws-dev",
+      "dst": "jump-01",
+      "technique": "rdp_lateral"
+    },
+    {
+      "src": "ws-hr",
+      "dst": "fileshare",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "fileshare",
+      "dst": "ws-dev",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "ci-runner",
+      "dst": "jump-01",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "jump-01",
+      "dst": "prod-db",
+      "technique": "rdp_lateral"
+    },
+    {
+      "src": "jump-01",
+      "dst": "backup-01",
+      "technique": "rdp_lateral"
+    },
+    {
+      "src": "payroll-api",
+      "dst": "prod-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-user-admin",
+      "dst": "jump-01",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-user-analyst",
+      "dst": "ws-dev",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-svc-payroll",
+      "dst": "payroll-api",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-user-customer",
+      "dst": "web-dmz",
+      "technique": "db_login"
+    }
+  ],
+  "flows": [
+    {
+      "id": "F1",
+      "name": "Customer Web Banking Traffic",
+      "src": "internet",
+      "dst": "web-dmz",
+      "technique": "exploit_public_app",
+      "criticality": 3
+    },
+    {
+      "id": "F2",
+      "name": "Web Portal API Integration",
+      "src": "web-dmz",
+      "dst": "payroll-api",
+      "technique": "db_login",
+      "criticality": 4
+    },
+    {
+      "id": "F3",
+      "name": "Payroll Transaction Ledger Commits",
+      "src": "payroll-api",
+      "dst": "prod-db",
+      "technique": "db_login",
+      "criticality": 5
+    },
+    {
+      "id": "F4",
+      "name": "Developer CI/CD Build Pipelines",
+      "src": "ws-dev",
+      "dst": "ci-runner",
+      "technique": "ssh_lateral",
+      "criticality": 3
+    },
+    {
+      "id": "F5",
+      "name": "Corporate File Sync & Archival",
+      "src": "ws-hr",
+      "dst": "fileshare",
+      "technique": "smb_lateral",
+      "criticality": 3
+    },
+    {
+      "id": "F6",
+      "name": "Disaster Recovery Backup Synchronization",
+      "src": "jump-01",
+      "dst": "backup-01",
+      "technique": "rdp_lateral",
+      "criticality": 4
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-mfa",
+      "name": "Privileged Access Multi-Factor Authentication",
+      "cost": 1500,
+      "blocks": [
+        "mfa",
+        "rdp_lateral",
+        "ssh_lateral",
+        "db_login",
+        "T1078",
+        "T1021.001",
+        "T1021.004"
+      ],
+      "scope": [
+        "jump-01",
+        "payroll-api"
+      ],
+      "efficacy": 0.95
+    },
+    {
+      "id": "ctrl-network-seg",
+      "name": "Core Banking Network Segmentation",
+      "cost": 2500,
+      "blocks": [
+        "network_segmentation",
+        "exploit_public_app",
+        "rdp_lateral",
+        "smb_lateral",
+        "ssh_lateral",
+        "db_login",
+        "T1190",
+        "T1021.001",
+        "T1021.002",
+        "T1021.004"
+      ],
+      "scope": [
+        "prod-db",
+        "backup-01"
+      ],
+      "efficacy": 0.90
+    },
+    {
+      "id": "ctrl-edr",
+      "name": "Host Endpoint Detection and Response",
+      "cost": 2000,
+      "blocks": [
+        "edr",
+        "cred_dump",
+        "priv_esc_local",
+        "T1003",
+        "T1068"
+      ],
+      "scope": [
+        "ws-dev",
+        "ws-hr",
+        "ci-runner"
+      ],
+      "efficacy": 0.85
+    },
+    {
+      "id": "ctrl-credguard",
+      "name": "Windows Credential Guard & LSA Isolation",
+      "cost": 1000,
+      "blocks": [
+        "credential_guard",
+        "cred_dump",
+        "T1003"
+      ],
+      "scope": [
+        "ws-dev",
+        "jump-01"
+      ],
+      "efficacy": 0.90
+    }
+  ],
+  "parent_id": null
+}

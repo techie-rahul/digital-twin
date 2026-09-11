@@ -1,0 +1,14 @@
+{
+  "test_name": "Adversarial Fuzzing Vectors",
+  "xss_stored_tag": "<script>alert('XSS_EXEC')</script>",
+  "xss_image_onerror": "<img src='invalid-image' onerror=\"alert('XSS_IMG')\" />",
+  "xss_svg": "<svg/onload=alert('XSS_SVG')>",
+  "sqli_classic": "' OR '1'='1' -- ",
+  "sqli_drop_table": "'; DROP TABLE nodes; DROP TABLE users; --",
+  "sqli_union": "' UNION SELECT username, password, email, 1, 2 FROM admin_users -- ",
+  "path_traversal_windows": "..\\..\\..\\..\\windows\\system32\\drivers\\etc\\hosts",
+  "path_traversal_linux": "../../../../../../../../etc/shadow",
+  "template_injection": "{{7 * 7}} ${7 * 7} <%= 7 * 7 %>",
+  "ldap_injection": "*)(uid=*))(|(uid=*",
+  "command_injection": "127.0.0.1 && cat /etc/passwd || dir C:\\"
+}

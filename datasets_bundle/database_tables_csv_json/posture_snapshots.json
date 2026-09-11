@@ -1,0 +1,41 @@
+[
+  {
+    "id": "snap_initial_01",
+    "organization_id": "org-acme-01",
+    "overall_score": 61.0,
+    "category_scores": "{\"Identity\": 55.0, \"Infrastructure\": 50.0, \"Application\": 85.0, \"Dependencies\": 90.0, \"Cloud\": 70.0, \"Third-Party\": 65.0}",
+    "critical_findings_count": 2,
+    "high_findings_count": 2,
+    "medium_findings_count": 1,
+    "low_findings_count": 0,
+    "total_assets_count": 20,
+    "event_trigger": "INITIAL_IMPORT",
+    "timestamp": "2026-09-11 10:57:58.791223"
+  },
+  {
+    "id": "snap_8a9106ad7b",
+    "organization_id": "org-acme-01",
+    "overall_score": 66.1,
+    "category_scores": "{\"Identity\": 60.0, \"Infrastructure\": 20.0, \"Application\": 100.0, \"Dependencies\": 44.0, \"Cloud\": 100.0, \"Third-Party\": 85.0}",
+    "critical_findings_count": 7,
+    "high_findings_count": 3,
+    "medium_findings_count": 3,
+    "low_findings_count": 0,
+    "total_assets_count": 28,
+    "event_trigger": "SBOM_ADDED",
+    "timestamp": "2026-09-11 11:03:54.337521"
+  },
+  {
+    "id": "snap_965b35a168",
+    "organization_id": "org-acme-01",
+    "overall_score": 66.1,
+    "category_scores": "{\"Identity\": 60.0, \"Infrastructure\": 20.0, \"Application\": 100.0, \"Dependencies\": 44.0, \"Cloud\": 100.0, \"Third-Party\": 85.0}",
+    "critical_findings_count": 7,
+    "high_findings_count": 3,
+    "medium_findings_count": 3,
+    "low_findings_count": 0,
+    "total_assets_count": 28,
+    "event_trigger": "SBOM_ADDED",
+    "timestamp": "2026-09-11 11:04:43.029642"
+  }
+]
