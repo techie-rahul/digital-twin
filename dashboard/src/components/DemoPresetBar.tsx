@@ -1,17 +1,5 @@
 import React, { useEffect } from 'react';
-import { motion } from 'framer-motion';
-import {
-  Layers,
-  ShieldAlert,
-  Users,
-  ShieldCheck,
-  RefreshCw,
-  Clock,
-  Sparkles,
-  Info,
-  FileCode2,
-} from 'lucide-react';
-import { DemoPresetId, DemoPresetConfig } from '../types/presets';
+import { DemoPresetId } from '../types/presets';
 import { DEMO_PRESETS } from '../data/presetsData';
 
 interface DemoPresetBarProps {
@@ -23,7 +11,6 @@ interface DemoPresetBarProps {
 export const DemoPresetBar: React.FC<DemoPresetBarProps> = ({
   activePresetId,
   onSelectPreset,
-  onOpenDataStudio,
 }) => {
   const presetsList = Object.values(DEMO_PRESETS);
   const activePreset = DEMO_PRESETS[activePresetId];
@@ -31,9 +18,7 @@ export const DemoPresetBar: React.FC<DemoPresetBarProps> = ({
   // Keyboard shortcut listener for 1-5
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if user is typing in an input
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
-
       if (e.key === '1') onSelectPreset('preset-baseline');
       if (e.key === '2') onSelectPreset('preset-full-seg');
       if (e.key === '3') onSelectPreset('preset-mfa');
@@ -45,147 +30,66 @@ export const DemoPresetBar: React.FC<DemoPresetBarProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onSelectPreset]);
 
-  const getPresetIcon = (id: DemoPresetId) => {
+  const getPresetDot = (id: DemoPresetId) => {
     switch (id) {
       case 'preset-baseline':
-        return <Layers className="w-3.5 h-3.5 text-ash-500" />;
+        return 'bg-ash-400';
       case 'preset-full-seg':
-        return <ShieldAlert className="w-3.5 h-3.5 text-red-600" />;
+        return 'bg-red-500';
       case 'preset-mfa':
-        return <Users className="w-3.5 h-3.5 text-amber-600" />;
+        return 'bg-amber-500';
       case 'preset-scoped-seg':
-        return <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />;
+        return 'bg-emerald-500';
       case 'preset-sync-drift':
-        return <RefreshCw className="w-3.5 h-3.5 text-orange-600" />;
+        return 'bg-orange-500';
     }
   };
 
-  const getPresetActiveStyle = (id: DemoPresetId) => {
+  const getPresetShortName = (id: DemoPresetId) => {
     switch (id) {
       case 'preset-baseline':
-        return 'bg-white text-ash-900 border-ash-400 shadow-sm ring-1 ring-ash-300';
+        return 'Baseline';
       case 'preset-full-seg':
-        return 'bg-white text-ash-900 border-red-400 shadow-sm ring-1 ring-red-300';
+        return 'Coarse Segregation';
       case 'preset-mfa':
-        return 'bg-white text-ash-900 border-amber-400 shadow-sm ring-1 ring-amber-300';
+        return 'Human MFA';
       case 'preset-scoped-seg':
-        return 'bg-white text-ash-900 border-emerald-400 shadow-sm ring-1 ring-emerald-300';
+        return 'Scoped Segregation';
       case 'preset-sync-drift':
-        return 'bg-white text-ash-900 border-orange-400 shadow-sm ring-1 ring-orange-300';
-    }
-  };
-
-  const getPresetMeta = (id: DemoPresetId) => {
-    switch (id) {
-      case 'preset-baseline':
-        return {
-          step: '01',
-          title: 'Baseline',
-          pill: 'BASELINE',
-          pillClass: 'bg-ash-100 text-ash-700 border border-ash-200',
-          sub: 'Full Attack Surface',
-        };
-      case 'preset-full-seg':
-        return {
-          step: '02',
-          title: 'Coarse Segregation',
-          pill: 'OUTAGE RISK',
-          pillClass: 'bg-red-50 text-red-700 border border-red-200 font-semibold',
-          sub: 'Severs Flow F3',
-        };
-      case 'preset-mfa':
-        return {
-          step: '03',
-          title: 'Human MFA',
-          pill: 'INSPECTION',
-          pillClass: 'bg-amber-50 text-amber-800 border border-amber-200 font-medium',
-          sub: 'Bypasses Service Svc',
-        };
-      case 'preset-scoped-seg':
-        return {
-          step: '04',
-          title: 'Scoped Segregation',
-          pill: 'VERIFIED',
-          pillClass: 'bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold',
-          sub: '0 Broken Flows',
-        };
-      case 'preset-sync-drift':
-        return {
-          step: '05',
-          title: 'Contractor Drift',
-          pill: 'DRIFT',
-          pillClass: 'bg-orange-50 text-orange-900 border border-orange-200 font-semibold',
-          sub: 'Role Bypass Detected',
-        };
+        return 'Contractor Drift';
     }
   };
 
   return (
-    <div className="rounded-2xl bg-white border border-canvas-border p-3.5 shadow-subtle space-y-2.5">
-      {/* Top Banner: Storyline Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-canvas-border text-xs">
-        <div className="flex items-center gap-2">
-          <Layers className="w-3.5 h-3.5 text-ash-500" />
-          <span className="font-semibold tracking-tight text-ash-900 text-xs">
-            Change Evaluation Scenarios
-          </span>
-          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono text-ash-500 bg-ash-100 border border-ash-200">
-            Keys 1–5
-          </span>
-        </div>
-
-        <div className="text-[11px] font-mono text-ash-400 hidden sm:flex items-center gap-1.5">
-          <Clock className="w-3 h-3 text-ash-400" />
-          <span>Interactive Traversal</span>
-        </div>
-      </div>
-
-      {/* 5 Preset Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-        {presetsList.map((preset) => {
+    <div className="rounded-xl bg-white border border-canvas-border px-3 py-2 shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+      {/* Sleek Segmented Switcher */}
+      <div className="flex items-center gap-1 overflow-x-auto p-0.5 rounded-lg bg-ash-100 border border-ash-200 text-xs">
+        {presetsList.map((preset, index) => {
           const isActive = activePresetId === preset.id;
-          const meta = getPresetMeta(preset.id);
-
           return (
             <button
               key={preset.id}
               onClick={() => onSelectPreset(preset.id)}
-              className={`relative flex flex-col p-2.5 rounded-xl text-left border transition-all duration-150 select-none active:scale-[0.98] cursor-pointer ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
                 isActive
-                  ? getPresetActiveStyle(preset.id)
-                  : 'bg-ash-50/70 hover:bg-white text-ash-700 border-canvas-border hover:border-ash-300 shadow-2xs'
+                  ? 'bg-white text-ash-900 font-semibold shadow-xs border border-ash-200/80'
+                  : 'text-ash-500 hover:text-ash-900 hover:bg-white/50'
               }`}
             >
-              <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="text-[10px] font-mono font-bold text-ash-400">
-                  {meta.step}
-                </span>
-                <span className={`px-1.5 py-0.2 rounded text-[9px] font-mono ${meta.pillClass}`}>
-                  {meta.pill}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5 min-w-0">
-                <div className="shrink-0">{getPresetIcon(preset.id)}</div>
-                <span className={`text-xs font-bold font-sans truncate ${isActive ? 'text-ash-900 font-extrabold' : 'text-ash-800'}`}>
-                  {meta.title}
-                </span>
-              </div>
-
-              <span className="text-[10px] font-mono text-ash-500 mt-1 block truncate">
-                {meta.sub}
+              <span className={`w-1.5 h-1.5 rounded-full ${getPresetDot(preset.id)} shrink-0`} />
+              <span>{getPresetShortName(preset.id)}</span>
+              <span className="text-[10px] font-mono text-ash-400 font-normal hidden sm:inline">
+                {index + 1}
               </span>
             </button>
           );
         })}
       </div>
 
-      {/* Active Scenario Live Explainer Strip */}
-      <div className="pt-0.5 flex items-center gap-2 text-xs font-mono">
-        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-ash-100 text-ash-700 border border-ash-200 shrink-0">
-          SCENARIO STATE
-        </span>
-        <span className="font-sans text-xs text-ash-800 font-medium truncate">
+      {/* 1-Line Status Summary */}
+      <div className="text-[11px] font-mono text-ash-500 flex items-center gap-2 truncate px-1">
+        <span className="text-ash-400 hidden lg:inline">Status:</span>
+        <span className="text-ash-700 font-medium truncate font-sans">
           {activePreset.tagline}
         </span>
       </div>

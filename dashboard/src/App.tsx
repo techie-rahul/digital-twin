@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Layers, ShieldCheck, SlidersHorizontal, Server } from 'lucide-react';
-import { Header } from './components/Header';
+import { Server } from 'lucide-react';
+import { Header, AppPresentationMode } from './components/Header';
 import { DemoPresetBar } from './components/DemoPresetBar';
 import { DecisionHeroCard } from './components/DecisionHeroCard';
 import { TopologyCanvas } from './components/TopologyCanvas';
 import { EvidenceView } from './components/EvidenceView';
-import { ChangeConsole } from './components/ChangeConsole';
 import { OptimizerPanel } from './components/OptimizerPanel';
 import { BlastRadiusModal } from './components/BlastRadiusModal';
 import { ChessPieceAuditorView } from './components/ChessPieceAuditorView';
@@ -18,11 +17,8 @@ import { DEMO_PRESETS } from './data/presetsData';
 import { GOLDEN_ASSETS, GOLDEN_EDGES, GOLDEN_FLOWS } from './data/topologyData';
 
 export const App: React.FC = () => {
-  // Top-level presentation mode: 'story' | 'evidence' | 'chess-audit' | 'lineage'
-  const [presentationMode, setPresentationMode] = useState<'story' | 'evidence' | 'chess-audit' | 'lineage'>('story');
-
-  // Active secondary tab when in custom sandbox testing
-  const [activeTab, setActiveTab] = useState<'topology' | 'console' | 'optimizer'>('topology');
+  // Top-level presentation mode: 'story' | 'optimizer' | 'evidence' | 'chess-audit' | 'lineage'
+  const [presentationMode, setPresentationMode] = useState<AppPresentationMode>('story');
 
   // Digital Twin state from backend
   const [currentTwinId, setCurrentTwinId] = useState<string>('twin-finbank-golden');
@@ -669,12 +665,9 @@ export const App: React.FC = () => {
     <div className="min-h-screen bg-[#FAFAFA] bg-tech-grid text-ash-900 flex flex-col font-sans">
       {/* Navigation Header with Top-Right Mode Toggle */}
       <Header
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
         presentationMode={presentationMode}
         onTogglePresentationMode={setPresentationMode}
         isBackendLive={isBackendLive}
-        onReset={handleResetScenario}
         currentTwinId={currentTwinId}
         onSelectTwinId={handleSelectScenario}
         onOpenDataStudio={() => setIsDataStudioOpen(true)}
@@ -682,12 +675,12 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-4">
         {/* ================================================================= */}
-        {/* 1. EXECUTIVE DECISION STORY MODE (Default for Judges & Pitch)     */}
+        {/* 1. DECISION GRAPH MODE (Default for Judges & Pitch)               */}
         {/* ================================================================= */}
         {presentationMode === 'story' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Presentation Demo Bar (Golden FinBank) OR Benchmark Interactive Sandbox Bar (Custom Scenarios) */}
             {currentTwinId === 'twin-finbank-golden' ? (
               <DemoPresetBar
@@ -696,34 +689,34 @@ export const App: React.FC = () => {
                 onOpenDataStudio={() => setIsDataStudioOpen(true)}
               />
             ) : (
-              <div className="rounded-2xl bg-white border border-canvas-border p-4 shadow-subtle space-y-3.5">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-canvas-border">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-ash-900 text-white flex items-center justify-center font-semibold text-sm shadow-subtle shrink-0">
-                      <Server className="w-4 h-4 text-ash-200" />
+              <div className="rounded-xl bg-white border border-canvas-border px-4 py-3 shadow-subtle space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-canvas-border">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-ash-900 text-white flex items-center justify-center font-semibold text-xs shadow-xs shrink-0">
+                      <Server className="w-3.5 h-3.5 text-ash-200" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-ash-900">
-                          {currentTwinId === 'twin-cloudapp-easy' ? 'CloudApp MicroSaaS Benchmark (Easy)' :
-                           currentTwinId === 'twin-neobank-medium' ? 'Neobank Payments Benchmark (Medium)' :
-                           currentTwinId === 'twin-medicare-hospital' ? 'Medicare Regional Hospital & Telehealth (Custom)' :
-                           'GlobalBank Enterprise Tier-0 Benchmark (Hard)'}
+                        <span className="font-bold text-xs text-ash-900">
+                          {currentTwinId === 'twin-cloudapp-easy' ? 'CloudApp MicroSaaS Benchmark' :
+                           currentTwinId === 'twin-neobank-medium' ? 'Neobank Payments Benchmark' :
+                           currentTwinId === 'twin-medicare-hospital' ? 'Medicare Regional Benchmark' :
+                           'GlobalBank Enterprise Benchmark'}
                         </span>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-ash-100 text-ash-700 border border-ash-200">
-                          {effectiveAssets.length} Assets • {effectiveEdges.length} Edges • {twin?.controls.length} Controls
+                        <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-medium bg-ash-100 text-ash-600 border border-ash-200">
+                          {effectiveAssets.length} Nodes • {effectiveEdges.length} Edges
                         </span>
                       </div>
-                      <p className="text-xs text-ash-500 mt-0.5">
-                        Target Crown Jewel: <strong className="text-ash-800 font-mono">{twin?.assets.find(a => a.crown_jewel)?.name || 'Database Core'} ({twin?.assets.find(a => a.crown_jewel)?.id})</strong>
+                      <p className="text-[11px] text-ash-400 mt-0.5">
+                        Target Crown Jewel: <strong className="text-ash-700 font-mono">{twin?.assets.find(a => a.crown_jewel)?.name || 'Database Core'} ({twin?.assets.find(a => a.crown_jewel)?.id})</strong>
                       </p>
                     </div>
                   </div>
 
-                  {/* Actions & Threat Actor Profile Selector */}
-                  <div className="flex items-center gap-2.5 self-start md:self-auto flex-wrap">
-                    <span className="text-[11px] font-mono font-medium text-ash-500 uppercase">Threat Actor:</span>
-                    <div className="inline-flex rounded-lg bg-ash-100 p-0.5 border border-ash-200">
+                  {/* Threat Actor Selector */}
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <span className="text-[10px] font-mono font-medium text-ash-400 uppercase">Actor:</span>
+                    <div className="inline-flex rounded-lg bg-ash-100 p-0.5 border border-ash-200 text-xs">
                       <button
                         onClick={() => setSelectedAdversaryId('agent-external')}
                         className={`px-2.5 py-1 text-xs rounded-md font-medium transition-all cursor-pointer ${
@@ -749,57 +742,27 @@ export const App: React.FC = () => {
                 </div>
 
                 {/* Defensive Controls Quick Toggle Pills */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-0.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[11px] font-mono text-ash-400 font-semibold uppercase">Toggle Controls:</span>
-                    {twin?.controls.map((ctrl) => {
+                {twin?.controls && twin.controls.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[10px] font-mono text-ash-400 font-medium uppercase mr-1">Controls:</span>
+                    {twin.controls.map((ctrl) => {
                       const isSelected = selectedControlIds.includes(ctrl.id);
                       return (
                         <button
                           key={ctrl.id}
                           onClick={() => handleToggleControl(ctrl.id)}
-                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono transition-all border shadow-xs cursor-pointer ${
+                          className={`px-2.5 py-1 rounded-md text-xs font-mono transition-all border cursor-pointer ${
                             isSelected
-                              ? 'bg-emerald-50 text-emerald-900 border-emerald-300 font-bold ring-2 ring-emerald-400/30'
-                              : 'bg-white hover:bg-ash-50 text-ash-700 border-ash-200 hover:border-ash-300'
+                              ? 'bg-emerald-50 text-emerald-900 border-emerald-300 font-semibold'
+                              : 'bg-white hover:bg-ash-50 text-ash-700 border-ash-200'
                           }`}
                         >
-                          <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[10px] ${
-                            isSelected ? 'bg-emerald-600 text-white' : 'bg-ash-200 text-ash-500'
-                          }`}>
-                            {isSelected ? '✓' : '+'}
-                          </span>
                           <span>{ctrl.name}</span>
-                          <span className="text-[10px] text-ash-400 font-normal">(${ctrl.cost})</span>
                         </button>
                       );
                     })}
-                    {selectedControlIds.length > 0 && (
-                      <button
-                        onClick={() => setSelectedControlIds([])}
-                        className="text-[11px] text-ash-400 hover:text-ash-700 underline font-mono ml-1 cursor-pointer"
-                      >
-                        Clear all
-                      </button>
-                    )}
                   </div>
-
-                  <div className="flex items-center gap-2 self-end sm:self-auto">
-                    <button
-                      onClick={handleRunSimulation}
-                      disabled={isSimulating}
-                      className="px-3.5 py-1.5 rounded-lg bg-brand-orange hover:bg-brand-orange-hover text-white text-xs font-mono font-semibold flex items-center gap-1.5 shadow-subtle transition-all cursor-pointer disabled:opacity-50"
-                    >
-                      <span>Run Breach Simulation</span>
-                    </button>
-                    <button
-                      onClick={() => handleSelectScenario('twin-finbank-golden')}
-                      className="px-3 py-1.5 rounded-lg bg-white hover:bg-ash-50 text-ash-700 hover:text-ash-900 border border-ash-200 text-xs font-medium shadow-xs transition-all cursor-pointer"
-                    >
-                      Baseline Scenario
-                    </button>
-                  </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -811,96 +774,43 @@ export const App: React.FC = () => {
               activePresetId={activePresetId}
             />
 
-            {/* Workspace View Switcher (Graph Canvas | Interactive Sandbox | Portfolio Optimizer) */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-              <div className="inline-flex items-center p-1 rounded-xl bg-white border border-canvas-border shadow-subtle text-xs font-sans">
-                <button
-                  onClick={() => setActiveTab('topology')}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'topology'
-                      ? 'bg-ash-900 text-white shadow-xs'
-                      : 'text-ash-500 hover:text-ash-900 hover:bg-ash-50'
-                  }`}
-                >
-                  <Layers className={`w-3.5 h-3.5 ${activeTab === 'topology' ? 'text-brand-orange' : 'text-ash-400'}`} />
-                  <span>Attack Topology Canvas</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('console')}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'console'
-                      ? 'bg-ash-900 text-white shadow-xs'
-                      : 'text-ash-500 hover:text-ash-900 hover:bg-ash-50'
-                  }`}
-                >
-                  <ShieldCheck className={`w-3.5 h-3.5 ${activeTab === 'console' ? 'text-brand-orange' : 'text-ash-400'}`} />
-                  <span>Change Sandbox</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('optimizer')}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'optimizer'
-                      ? 'bg-ash-900 text-white shadow-xs'
-                      : 'text-ash-500 hover:text-ash-900 hover:bg-ash-50'
-                  }`}
-                >
-                  <SlidersHorizontal className={`w-3.5 h-3.5 ${activeTab === 'optimizer' ? 'text-brand-orange' : 'text-ash-400'}`} />
-                  <span>Portfolio Optimizer</span>
-                </button>
-              </div>
-
-              <div className="text-[11px] font-mono text-ash-400 hidden md:block">
-                Interactive Graph & Policy Simulation
-              </div>
-            </div>
-
-            {/* Sub-tab view: Topology Graph (default) vs Custom Sandbox / Optimizer */}
-            {activeTab === 'topology' && (
-              <TopologyCanvas
-                assets={effectiveAssets}
-                edges={effectiveEdges}
-                flows={effectiveFlows}
-                controls={twin.controls}
-                selectedControlIds={selectedControlIds}
-                compromisedNodeIds={compromisedNodeIds}
-                simulationSteps={simulationSteps}
-                isSimulating={isSimulating}
-                brokenFlowIds={effectiveBrokenFlowIds}
-                onRunSimulation={handleRunSimulation}
-                onResetSimulation={handleResetSimulation}
-                onInspectBlastRadius={handleInspectBlastRadius}
-                activeControlNames={activeControlNames}
-                blastRadiusData={blastRadiusData}
-                onClearBlastRadius={() => setBlastRadiusData(null)}
-                currentTwinId={currentTwinId}
-                // Demo Preset Flags (scoped to FinBank)
-                activePresetId={currentTwinId === 'twin-finbank-golden' ? activePresetId : 'preset-baseline'}
-                isReroutingActive={currentTwinId === 'twin-finbank-golden' && activePreset.isReroutingActive}
-                reroutingCaption={currentTwinId === 'twin-finbank-golden' ? activePreset.reroutingCaption : undefined}
-                isDriftActive={currentTwinId === 'twin-finbank-golden' && activePreset.isDriftActive}
-                isP1OutageActive={currentTwinId === 'twin-finbank-golden' && activePreset.isP1OutageActive}
-                riskScorePct={activePreset.riskScorePct}
-              />
-            )}
-
-            {activeTab === 'console' && (
-              <ChangeConsole
-                availableControls={twin.controls}
-                selectedControlIds={selectedControlIds}
-                onToggleControl={handleToggleControl}
-                verdict={verdict}
-                isEvaluating={isEvaluating}
-              />
-            )}
-
-            {activeTab === 'optimizer' && (
-              <OptimizerPanel
-                optimizationResult={optimizationResult}
-                onRunOptimization={handleRunOptimization}
-                isOptimizing={isOptimizing}
-              />
-            )}
+            {/* Primary Interactive Topology Graph */}
+            <TopologyCanvas
+              assets={effectiveAssets}
+              edges={effectiveEdges}
+              flows={effectiveFlows}
+              controls={twin?.controls || []}
+              selectedControlIds={selectedControlIds}
+              compromisedNodeIds={compromisedNodeIds}
+              simulationSteps={simulationSteps}
+              isSimulating={isSimulating}
+              brokenFlowIds={effectiveBrokenFlowIds}
+              onRunSimulation={handleRunSimulation}
+              onResetSimulation={handleResetSimulation}
+              onInspectBlastRadius={handleInspectBlastRadius}
+              activeControlNames={activeControlNames}
+              blastRadiusData={blastRadiusData}
+              onClearBlastRadius={() => setBlastRadiusData(null)}
+              currentTwinId={currentTwinId}
+              activePresetId={currentTwinId === 'twin-finbank-golden' ? activePresetId : 'preset-baseline'}
+              isReroutingActive={currentTwinId === 'twin-finbank-golden' && activePreset.isReroutingActive}
+              reroutingCaption={currentTwinId === 'twin-finbank-golden' ? activePreset.reroutingCaption : undefined}
+              isDriftActive={currentTwinId === 'twin-finbank-golden' && activePreset.isDriftActive}
+              isP1OutageActive={currentTwinId === 'twin-finbank-golden' && activePreset.isP1OutageActive}
+              riskScorePct={activePreset.riskScorePct}
+            />
           </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* 2. PORTFOLIO OPTIMIZER MODE                                       */}
+        {/* ================================================================= */}
+        {presentationMode === 'optimizer' && (
+          <OptimizerPanel
+            optimizationResult={optimizationResult}
+            onRunOptimization={handleRunOptimization}
+            isOptimizing={isOptimizing}
+          />
         )}
 
         {/* ================================================================= */}

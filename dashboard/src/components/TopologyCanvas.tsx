@@ -224,94 +224,69 @@ export const TopologyCanvas: React.FC<TopologyCanvasProps> = ({
   return (
     <div className="space-y-4">
       {/* Simulation Command Bar */}
-      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3 p-3 rounded-xl bg-white border border-canvas-border shadow-subtle">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 px-3.5 py-2 rounded-xl bg-white border border-canvas-border shadow-subtle">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-lg bg-brand-orange-light text-brand-orange border border-brand-orange-border shrink-0">
-            <Activity className="w-4 h-4" />
+          <div className="p-1.5 rounded-lg bg-brand-orange-light text-brand-orange border border-brand-orange-border shrink-0">
+            <Activity className="w-3.5 h-3.5" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-ash-900 tracking-tight">
-                Adversary Traversal & Business Dependency Graph
-              </h3>
-              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-ash-100 text-ash-700 border border-ash-200">
-                {assets.length} Assets • {edges.length} Edges
-              </span>
-            </div>
-            <p className="text-[11px] text-ash-400 mt-0.5 hidden sm:block">
-              Interactive directed topology modelling adversary lateral movement, active security controls, and operational flows
-            </p>
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs font-bold text-ash-900 tracking-tight">
+              Topology & Lateral Movement Graph
+            </h3>
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-medium bg-ash-100 text-ash-600 border border-ash-200">
+              {assets.length} Nodes • {edges.length} Edges
+            </span>
           </div>
         </div>
 
         {/* Action Controls Strip */}
-        <div className="flex flex-wrap items-center gap-2.5 w-full xl:w-auto justify-start xl:justify-end">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
           {/* View Filter Mode Toggle */}
           <div className="flex items-center rounded-lg border border-canvas-border bg-ash-50 p-0.5 text-xs font-mono">
             <button
               onClick={() => setViewMode('all')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${
+              className={`px-2 py-0.5 rounded text-[11px] transition-colors cursor-pointer ${
                 viewMode === 'all'
-                  ? 'bg-white text-ash-900 font-bold shadow-subtle'
+                  ? 'bg-white text-ash-900 font-semibold shadow-xs'
                   : 'text-ash-500 hover:text-ash-800'
               }`}
             >
-              All Links
+              All
             </button>
             <button
               onClick={() => setViewMode('attack')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${
+              className={`px-2 py-0.5 rounded text-[11px] transition-colors cursor-pointer ${
                 viewMode === 'attack'
-                  ? 'bg-white text-brand-orange font-bold shadow-subtle'
+                  ? 'bg-white text-brand-orange font-semibold shadow-xs'
                   : 'text-ash-500 hover:text-ash-800'
               }`}
             >
-              Attack Vectors
+              Attacks
             </button>
             <button
               onClick={() => setViewMode('flows')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${
+              className={`px-2 py-0.5 rounded text-[11px] transition-colors cursor-pointer ${
                 viewMode === 'flows'
-                  ? 'bg-white text-emerald-700 font-bold shadow-subtle'
+                  ? 'bg-white text-emerald-700 font-semibold shadow-xs'
                   : 'text-ash-500 hover:text-ash-800'
               }`}
             >
-              Service Flows
+              Flows
             </button>
           </div>
-
-          {/* Active Controls Indicator */}
-          {activeControlNames.length > 0 && (
-            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-ash-100 border border-ash-200 text-xs font-mono text-ash-700">
-              <Lock className="w-3 h-3 text-brand-orange" />
-              <span className="truncate max-w-[200px]" title={activeControlNames.join(', ')}>
-                Active: {activeControlNames.join(', ')}
-              </span>
-            </div>
-          )}
 
           {/* Run Simulation Button */}
           <button
             onClick={onRunSimulation}
             disabled={isSimulating}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-[0.98] ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-mono font-semibold transition-all active:scale-[0.98] cursor-pointer ${
               isSimulating
                 ? 'bg-ash-200 text-ash-400 cursor-not-allowed'
                 : 'bg-brand-orange hover:bg-brand-orange-hover text-white shadow-subtle'
             }`}
           >
-            <Play className={`w-3.5 h-3.5 fill-current ${isSimulating ? 'animate-spin' : ''}`} />
-            <span>{isSimulating ? 'Simulating Breach...' : 'Run Breach Simulation'}</span>
-          </button>
-
-          {/* Reset Simulation Button */}
-          <button
-            onClick={onResetSimulation}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-ash-50 text-ash-700 border border-ash-200 text-xs font-medium transition-all active:scale-[0.98] shadow-subtle"
-            title="Reset simulation markers and trajectory"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-ash-400" />
-            <span>Reset</span>
+            <Play className={`w-3 h-3 fill-current ${isSimulating ? 'animate-spin' : ''}`} />
+            <span>{isSimulating ? 'Simulating...' : 'Run Simulation'}</span>
           </button>
         </div>
       </div>
