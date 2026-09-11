@@ -1,8 +1,8 @@
-"""Focused tests for the MITRE ATT&CK technique catalog loader and validation."""
+"""Focused tests for the final v2.1 MITRE ATT&CK technique catalog loader and validation."""
 
-import pytest
-import tempfile
 from pathlib import Path
+import tempfile
+import pytest
 
 from backend.rules.loader import (
     load_techniques,
@@ -13,40 +13,35 @@ from backend.rules.loader import (
 )
 
 
-def test_yaml_loads_successfully():
-    """Verify techniques.yaml can be loaded without error."""
+def test_yaml_loads_all_10_techniques():
+    """Verify techniques.yaml loads the exact 10 final v2.1 techniques."""
     techniques = load_techniques()
     assert isinstance(techniques, tuple)
-    assert len(techniques) >= 10
-    assert len(techniques) <= 12
+    assert len(techniques) == 10
 
 
-def test_every_technique_has_required_fields():
-    """Verify all loaded techniques populate id, name, description, prerequisites, grants, blocks."""
+def test_every_technique_has_required_v21_fields():
+    """Verify all loaded techniques populate id, attck, requires, grants, base_success, cost, noise."""
     techniques = load_techniques()
     for tech in techniques:
         assert isinstance(tech, TechniqueDefinition)
         assert bool(tech.id and tech.id.strip())
-        assert bool(tech.name and tech.name.strip())
-        assert bool(tech.description and tech.description.strip())
-        assert isinstance(tech.prerequisites, tuple)
+        assert bool(tech.attck and tech.attck.strip())
+        assert MITRE_ID_REGEX.match(tech.attck)
+        assert isinstance(tech.requires, tuple)
         assert isinstance(tech.grants, tuple)
-        assert isinstance(tech.blocks, tuple)
+        assert 0.0 <= tech.base_success <= 1.0
+        assert tech.cost >= 0.0
+        assert 0.0 <= tech.noise <= 1.0
 
 
-def test_technique_ids_are_unique():
-    """Verify there are zero duplicate technique IDs in the catalog."""
+def test_technique_ids_and_attck_are_unique():
+    """Verify there are zero duplicate IDs or ATT&CK IDs in the catalog."""
     techniques = load_techniques()
     id_list = [t.id for t in techniques]
-    id_set = set(id_list)
-    assert len(id_list) == len(id_set), f"Duplicate IDs detected: {len(id_list) - len(id_set)}"
-
-
-def test_technique_ids_have_mitre_format():
-    """Verify every technique ID follows canonical MITRE Enterprise ATT&CK format."""
-    techniques = load_techniques()
-    for tech in techniques:
-        assert MITRE_ID_REGEX.match(tech.id), f"Invalid MITRE ID format: {tech.id}"
+    attck_list = [t.attck for t in techniques]
+    assert len(id_list) == len(set(id_list)), "Duplicate technique ID detected"
+    assert len(attck_list) == len(set(attck_list)), "Duplicate ATT&CK ID detected"
 
 
 def test_loader_returns_deterministic_ordering():
@@ -57,32 +52,35 @@ def test_loader_returns_deterministic_ordering():
     assert [t.id for t in run1] == [t.id for t in run2]
 
 
-def test_expected_baseline_techniques_present():
-    """Verify core enterprise techniques needed by the prototype are in the catalog."""
+def test_expected_10_canonical_techniques_present():
+    """Verify all 10 final techniques are present with expected MITRE IDs."""
     tech_map = load_techniques_map()
-    expected_ids = {
-        "T1046",      # Network Service Scanning
-        "T1087",      # Account Discovery
-        "T1078",      # Valid Accounts
-        "T1021.001",  # Remote Services: RDP
-        "T1021.002",  # Remote Services: SMB
-        "T1021.004",  # Remote Services: SSH
-        "T1059.001",  # Command & Scripting: PowerShell
-        "T1003",      # OS Credential Dumping
-        "T1550.002",  # Pass the Hash
-        "T1560",      # Archive Collected Data
-        "T1041",      # Exfiltration Over C2 Channel
+    expected = {
+        "phish": "T1566",
+        "exploit_public_app": "T1190",
+        "cred_dump": "T1003",
+        "priv_esc_local": "T1068",
+        "creds_in_files": "T1552.001",
+        "rdp_lateral": "T1021.001",
+        "ssh_lateral": "T1021.004",
+        "smb_lateral": "T1021.002",
+        "db_login": "T1078",
+        "exfil_c2": "T1041",
     }
-    for tid in expected_ids:
-        assert tid in tech_map, f"Expected baseline technique {tid} missing from catalog"
+    for tech_id, expected_attck in expected.items():
+        assert tech_id in tech_map, f"Technique '{tech_id}' missing from catalog"
+        assert tech_map[tech_id].attck == expected_attck
+        # Also indexed by ATT&CK ID
+        assert expected_attck in tech_map
+        assert tech_map[expected_attck].id == tech_id
 
 
 def test_reject_missing_required_fields():
     """Verify loader raises ValueError if an entry misses required keys."""
     invalid_yaml = """
-- id: "T1078"
-  name: "Valid Accounts"
-  # missing description, prerequisites, grants, blocks
+- id: "db_login"
+  attck: "T1078"
+  # missing requires, grants, base_success, cost, noise
 """
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(invalid_yaml)
@@ -98,19 +96,21 @@ def test_reject_missing_required_fields():
 def test_reject_duplicate_ids():
     """Verify loader raises ValueError if duplicate IDs are present."""
     duplicate_yaml = """
-- id: "T1078"
-  name: "Valid Accounts"
-  description: "Desc 1"
-  prerequisites: []
+- id: "db_login"
+  attck: "T1078"
+  requires: []
   grants: []
-  blocks: []
+  base_success: 0.9
+  cost: 1.0
+  noise: 0.1
 
-- id: "T1078"
-  name: "Valid Accounts Duplicate"
-  description: "Desc 2"
-  prerequisites: []
+- id: "db_login"
+  attck: "T1078.001"
+  requires: []
   grants: []
-  blocks: []
+  base_success: 0.8
+  cost: 2.0
+  noise: 0.2
 """
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(duplicate_yaml)
@@ -124,14 +124,15 @@ def test_reject_duplicate_ids():
 
 
 def test_reject_invalid_mitre_id_format():
-    """Verify loader rejects fake or malformed MITRE technique IDs."""
+    """Verify loader rejects malformed MITRE ATT&CK technique IDs."""
     malformed_id_yaml = """
-- id: "FAKE_TECHNIQUE_123"
-  name: "Fake Technique"
-  description: "Desc"
-  prerequisites: []
+- id: "bad_tech"
+  attck: "INVALID_MITRE_ID"
+  requires: []
   grants: []
-  blocks: []
+  base_success: 0.5
+  cost: 1.0
+  noise: 0.1
 """
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(malformed_id_yaml)
@@ -160,4 +161,4 @@ def test_reject_empty_or_non_list_yaml():
 def test_file_not_found_raises():
     """Verify loader raises FileNotFoundError when path does not exist."""
     with pytest.raises(FileNotFoundError):
-        load_techniques("backend/rules/non_existent_techniques.yaml")
+        load_techniques("rules/non_existent_techniques.yaml")

@@ -375,7 +375,7 @@ def test_golden_twin_compiles_with_technique_catalog(golden_twin):
     jump_edges = compiled.adjacency["jump-01"]
     for e in jump_edges:
         if e.dst == "prod-db":
-            assert "ctrl-network-seg" in e.active_control_ids
+            assert "ctrl-network-seg" in e.evidence
 
 
 # =====================================================================

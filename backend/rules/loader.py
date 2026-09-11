@@ -6,47 +6,75 @@ from typing import Dict, List, Optional, Tuple, Union
 import yaml
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
-# Default path to canonical techniques.yaml
+# Default paths to canonical techniques.yaml
 DEFAULT_TECHNIQUES_PATH = Path(__file__).parent / "techniques.yaml"
+DEFAULT_TECHNIQUES_PATHS = [
+    Path("rules/techniques.yaml"),
+    DEFAULT_TECHNIQUES_PATH,
+]
+
 
 # Regex strictly matching MITRE Enterprise Technique IDs (e.g. T1078 or sub-technique T1021.001)
 MITRE_ID_REGEX = re.compile(r"^T\d{4}(\.\d{3})?$")
 
 
 class TechniqueDefinition(BaseModel, frozen=True):
-    """Immutable, validated representation of an enterprise attack technique."""
-    id: str = Field(..., description="MITRE ATT&CK technique ID (e.g. T1078, T1021.001)")
-    name: str = Field(..., description="Canonical technique name")
-    description: str = Field(..., description="Summary description of the attack technique")
-    prerequisites: tuple[str, ...] = Field(default_factory=tuple, description="Capabilities/conditions required")
-    grants: tuple[str, ...] = Field(default_factory=tuple, description="Capabilities/privileges granted")
-    blocks: tuple[str, ...] = Field(default_factory=tuple, description="Defensive security controls that mitigate")
+    """Immutable, validated representation of an enterprise attack technique in v2.1."""
 
-    @field_validator("id")
+    id: str = Field(..., description="Canonical technique identifier (e.g. 'phish', 'rdp_lateral')")
+    attck: str = Field(..., description="MITRE ATT&CK technique ID (e.g. 'T1566', 'T1021.001')")
+    name: Optional[str] = None
+    description: Optional[str] = ""
+    protocol: Optional[str] = Field(default=None, description="Transport/application protocol")
+    port: Optional[int] = Field(default=None, description="Default network port")
+    requires: tuple[str, ...] = Field(default_factory=tuple, description="Prerequisites/capabilities required")
+    grants: tuple[str, ...] = Field(default_factory=tuple, description="Capabilities/privileges granted")
+    base_success: float = Field(default=1.0, ge=0.0, le=1.0, description="Base success probability (0-1)")
+    cost: float = Field(default=1.0, ge=0.0, description="Attacker effort cost (>=0)")
+    noise: float = Field(default=0.0, ge=0.0, le=1.0, description="Detection noise (0-1)")
+
+    @field_validator("attck")
     @classmethod
-    def validate_mitre_id(cls, value: str) -> str:
+    def validate_attck_id(cls, value: str) -> str:
         value = value.strip()
         if not MITRE_ID_REGEX.match(value):
             raise ValueError(f"Invalid MITRE ATT&CK technique ID format: '{value}'")
         return value
 
-    @field_validator("name", "description")
+    @field_validator("id")
     @classmethod
-    def validate_non_empty(cls, value: str) -> str:
+    def validate_id(cls, value: str) -> str:
         if not value or not value.strip():
-            raise ValueError("Field cannot be empty or whitespace only")
+            raise ValueError("Technique id cannot be empty or whitespace only")
         return value.strip()
 
 
+def resolve_techniques_path(filepath: Optional[Union[str, Path]] = None) -> Path:
+    """Resolve the techniques.yaml file path, checking canonical locations."""
+    if filepath is not None:
+        p = Path(filepath)
+        if p.exists():
+            return p
+        raise FileNotFoundError(f"Techniques catalog file not found: {filepath}")
+
+    for p in DEFAULT_TECHNIQUES_PATHS:
+        if p.exists():
+            return p
+
+    raise FileNotFoundError(
+        f"Techniques catalog file not found at any default location: {DEFAULT_TECHNIQUES_PATHS}"
+    )
+
+
 def load_techniques(
-    filepath: Union[str, Path] = DEFAULT_TECHNIQUES_PATH
+    filepath: Optional[Union[str, Path]] = None
 ) -> tuple[TechniqueDefinition, ...]:
     """Load, validate, and return all techniques from a YAML file in deterministic order.
 
     Parameters
     ----------
-    filepath : Union[str, Path]
-        Path to the techniques YAML file.
+    filepath : Optional[Union[str, Path]]
+        Path to the techniques YAML file. If None, checks default canonical paths.
 
     Returns
     -------
@@ -60,9 +88,7 @@ def load_techniques(
     ValueError
         If YAML is malformed, contains duplicate IDs, or fails validation.
     """
-    path = Path(filepath)
-    if not path.exists():
-        raise FileNotFoundError(f"Techniques catalog file not found: {path}")
+    path = resolve_techniques_path(filepath)
 
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -77,14 +103,15 @@ def load_techniques(
         raise ValueError("Technique catalog cannot be empty")
 
     seen_ids: set[str] = set()
+    seen_attck: set[str] = set()
     validated_techniques: List[TechniqueDefinition] = []
 
     for index, item in enumerate(raw_data):
         if not isinstance(item, dict):
             raise ValueError(f"Entry #{index} is not a valid technique dictionary: {item}")
 
-        # Check required fields exist before validation
-        required_fields = {"id", "name", "description", "prerequisites", "grants", "blocks"}
+        # Required fields in final v2.1 structure
+        required_fields = {"id", "attck", "requires", "grants", "base_success", "cost", "noise"}
         missing_fields = required_fields - set(item.keys())
         if missing_fields:
             raise ValueError(
@@ -92,34 +119,44 @@ def load_techniques(
             )
 
         try:
-            # Convert list fields to tuples for immutability
-            prereqs = tuple(item.get("prerequisites") or [])
+            requires = tuple(item.get("requires") or [])
             grants = tuple(item.get("grants") or [])
-            blocks = tuple(item.get("blocks") or [])
 
             tech = TechniqueDefinition(
                 id=item["id"],
-                name=item["name"],
-                description=item["description"],
-                prerequisites=prereqs,
+                attck=item["attck"],
+                name=item.get("name"),
+                description=item.get("description", ""),
+                protocol=item.get("protocol"),
+                port=item.get("port"),
+                requires=requires,
                 grants=grants,
-                blocks=blocks,
+                base_success=float(item["base_success"]),
+                cost=float(item["cost"]),
+                noise=float(item["noise"]),
             )
         except (ValidationError, ValueError) as e:
             raise ValueError(f"Validation failed for technique #{index}: {e}") from e
 
         if tech.id in seen_ids:
             raise ValueError(f"Duplicate technique ID found: '{tech.id}'")
+        if tech.attck in seen_attck:
+            raise ValueError(f"Duplicate MITRE ATT&CK ID found: '{tech.attck}'")
 
         seen_ids.add(tech.id)
+        seen_attck.add(tech.attck)
         validated_techniques.append(tech)
 
     return tuple(validated_techniques)
 
 
 def load_techniques_map(
-    filepath: Union[str, Path] = DEFAULT_TECHNIQUES_PATH
+    filepath: Optional[Union[str, Path]] = None
 ) -> Dict[str, TechniqueDefinition]:
-    """Load and return techniques indexed by MITRE ATT&CK ID."""
+    """Load and return techniques indexed by BOTH canonical ID and MITRE ATT&CK ID."""
     techniques = load_techniques(filepath)
-    return {t.id: t for t in techniques}
+    mapping: Dict[str, TechniqueDefinition] = {}
+    for t in techniques:
+        mapping[t.id] = t
+        mapping[t.attck] = t
+    return mapping

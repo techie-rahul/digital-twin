@@ -1,4 +1,4 @@
-"""Rules and techniques package."""
+"""Rules, techniques, channel projection, and compilation package."""
 
 from backend.rules.loader import (
     TechniqueDefinition,
@@ -10,6 +10,12 @@ from backend.rules.compile import (
     CompiledEdge,
     CompiledTwin,
     compile_twin,
+    Channel,
+    ControlSelector,
+    ControlImpact,
+    to_channel,
+    matches,
+    selector_matches,
 )
 
 __all__ = [
@@ -20,4 +26,10 @@ __all__ = [
     "CompiledEdge",
     "CompiledTwin",
     "compile_twin",
+    "Channel",
+    "ControlSelector",
+    "ControlImpact",
+    "to_channel",
+    "matches",
+    "selector_matches",
 ]
