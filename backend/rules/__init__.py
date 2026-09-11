@@ -26,11 +26,21 @@ from backend.rules.evaluate import (
     evaluate_change,
     EXACT_MFA_SERVICE_IDENTITY_MSG,
 )
-
 from backend.rules.optimize import (
-    OptimizationPortfolio,
-    OptimizationResult,
+    CandidateEvaluation,
+    Portfolio,
+    optimize,
     optimize_controls,
+)
+from backend.rules.audit import (
+    AuditSummary,
+    CrawlAuditPath,
+    CrawlAuditResult,
+    NodeAudit,
+    PrioritizedFix,
+    RecommendedFix,
+    Vulnerability,
+    crawl_audit,
 )
 
 __all__ = [
@@ -54,8 +64,17 @@ __all__ = [
     "compute_confidence",
     "evaluate_change",
     "EXACT_MFA_SERVICE_IDENTITY_MSG",
-    "OptimizationPortfolio",
-    "OptimizationResult",
+    "CandidateEvaluation",
+    "Portfolio",
+    "optimize",
     "optimize_controls",
+    "AuditSummary",
+    "CrawlAuditPath",
+    "CrawlAuditResult",
+    "NodeAudit",
+    "PrioritizedFix",
+    "RecommendedFix",
+    "Vulnerability",
+    "crawl_audit",
 ]
 

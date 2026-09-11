@@ -56,6 +56,14 @@ from backend.core.results import (
     compute_weighted_risk,
 )
 
+from backend.core.blast_radius import (
+    BlastRadiusResult,
+    calculate_blast_radius,
+    compute_blast_radius,
+    resolve_sessions_on_asset,
+    compute_network_descendants,
+)
+
 __all__ = [
     "Asset",
     "Identity",
@@ -99,6 +107,11 @@ __all__ = [
     "compute_effort_distribution",
     "compute_edge_frequencies",
     "compute_weighted_risk",
+    "BlastRadiusResult",
+    "calculate_blast_radius",
+    "compute_blast_radius",
+    "resolve_sessions_on_asset",
+    "compute_network_descendants",
 ]
 
 

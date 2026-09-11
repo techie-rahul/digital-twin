@@ -4,11 +4,15 @@ An autonomous agent that walks the network graph like a chess piece — hop by
 hop — analyzing every node it lands on, listing all vulnerabilities, calculating
 risk, recommending the cheapest fix, then moving to the next node.
 
-This module is READ-ONLY analysis.  It does NOT modify the twin, run
-simulations, or call Algorithm A/B.  It uses the static graph topology,
-technique catalog, control definitions, and flow definitions to produce the
-audit.  This keeps it fast (~10 ms) and completely decoupled from existing
-phases.
+This module is a READ-ONLY explainability and node-level audit layer.
+It does NOT modify the twin, run simulations, or call Algorithm A/B.
+It uses the static graph topology, MITRE ATT&CK technique catalog, control definitions,
+and business flow definitions to produce an explainable node-by-node audit.
+
+NOTE: This topological crawl is designed for explainability and node-level exposure
+analysis; it should NOT be confused with the authenticated, stateful attacker reachability
+model from Phase 3 (which enforces strict credential barriers, capabilities, and compiled transitions).
+Findings map to MITRE ATT&CK technique IDs rather than CVE numbers.
 """
 
 from __future__ import annotations
