@@ -136,7 +136,7 @@ Run plan-then-execute adversary simulation. Results are cached by `(twin_hash, a
 ### `POST /evaluate-change` ⭐ (centrepiece)
 Propose security controls and receive a `ChangeVerdict`.
 
-**CURRENT STATUS**: Stubbed (returns schema-correct mock). Wire to `backend.rules.evaluate` when Person 2 delivers.
+**CURRENT STATUS**: **LIVE** — Calls `backend.rules.evaluate.evaluate_change()`. Returns complete `ChangeVerdict` with security delta, broken service flows, confidence scoring, and CAB recommendation.
 
 **Request body**
 ```json
