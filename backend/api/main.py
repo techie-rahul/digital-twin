@@ -137,6 +137,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(router)
+    app.include_router(router, prefix="/api")
 
     # Mount compiled production frontend if dist directory exists
     from fastapi.staticfiles import StaticFiles

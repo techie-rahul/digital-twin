@@ -12,3 +12,6 @@ venv/
 ENV/
 node_modules/
 dashboard/node_modules/
+dashboard/dist/
+test-dashboard/
+.playwright-mcp/

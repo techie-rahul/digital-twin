@@ -1,4 +1,13 @@
-import { Twin, SimulateResponse, ChangeVerdict, OptimizationResult, BlastRadiusResponse } from '../types/api';
+import {
+  Twin,
+  SimulateResponse,
+  ChangeVerdict,
+  OptimizationResult,
+  BlastRadiusResponse,
+  CrawlAuditRequest,
+  CrawlAuditResult,
+  LineageOut,
+} from '../types/api';
 
 const API_BASE = '/api';
 
@@ -136,6 +145,40 @@ export const apiClient = {
     } catch (e) {
       console.warn('Falling back to local blast radius mock:', e);
       return getFallbackBlastRadius(assetId);
+    }
+  },
+
+  async crawlAudit(params: CrawlAuditRequest): Promise<CrawlAuditResult> {
+    try {
+      const payload = {
+        twin_id: params.twin_id || 'twin-finbank-golden',
+        start_node: params.start_node || 'internet',
+        target_node: params.target_node || null,
+        active_control_ids: params.active_control_ids || [],
+        max_paths: params.max_paths || 20,
+        max_depth: params.max_depth || 8,
+      };
+      const res = await fetch(`${API_BASE}/crawl-audit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      return await res.json();
+    } catch (e) {
+      console.warn('Falling back to local crawl audit mock:', e);
+      return getFallbackCrawlAudit(params);
+    }
+  },
+
+  async getLineage(twinId: string = 'twin-finbank-golden'): Promise<LineageOut> {
+    try {
+      const res = await fetch(`${API_BASE}/lineage/${twinId}`);
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      return await res.json();
+    } catch (e) {
+      console.warn('Falling back to local lineage mock:', e);
+      return getFallbackLineage(twinId);
     }
   },
 };
@@ -433,3 +476,294 @@ function getFallbackBlastRadius(assetId: string): BlastRadiusResponse {
     direct_dependencies: ["ci-runner"],
   };
 }
+
+function getFallbackCrawlAudit(params: CrawlAuditRequest): CrawlAuditResult {
+  const startNode = params.start_node || 'internet';
+  const targetNode = params.target_node || 'prod-db';
+
+  return {
+    start_node: startNode,
+    target_node: targetNode,
+    total_paths: 2,
+    paths: [
+      {
+        path: ['internet', 'web-dmz', 'jump-01', 'prod-db'],
+        total_hops: 3,
+        node_audits: [
+          {
+            step_index: 0,
+            asset_id: 'internet',
+            asset_name: 'External Internet Gateway',
+            zone: 'dmz',
+            criticality: 1,
+            crown_jewel: false,
+            entry_technique: null,
+            entry_from: null,
+            vulnerabilities: [
+              {
+                type: 'technique_exposure',
+                severity: 'MEDIUM',
+                title: 'Perimeter Ingress Point',
+                description: 'Public routing exposes edge services to unauthenticated network probing.',
+                mitre_id: 'T1190',
+                affected_asset_id: 'internet',
+              },
+            ],
+            risk_score: 2.1,
+            recommended_fix: {
+              control_id: 'ctrl-edr',
+              control_name: 'Edge Rate Limiting & EDR Filtering',
+              cost: 1200,
+              vulnerabilities_fixed: 1,
+              description: 'Throttle unsolicited inbound sweep attempts at perimeter gateway.',
+            },
+            outgoing_edges: [
+              {
+                dst: 'web-dmz',
+                dst_name: 'Online Banking Web Portal',
+                technique: 'exploit_public_app',
+                mitre_id: 'T1190',
+                crosses_zone: false,
+                dst_zone: 'dmz',
+              },
+            ],
+            flows_through: [
+              {
+                flow_id: 'F1',
+                flow_name: 'Customer Web Banking Traffic',
+                criticality: 3,
+                role: 'source',
+              },
+            ],
+            crown_jewels_reachable: ['prod-db', 'backup-01'],
+          },
+          {
+            step_index: 1,
+            asset_id: 'web-dmz',
+            asset_name: 'Online Banking Web Portal',
+            zone: 'dmz',
+            criticality: 3,
+            crown_jewel: false,
+            entry_technique: 'exploit_public_app',
+            entry_from: 'internet',
+            vulnerabilities: [
+              {
+                type: 'technique_exposure',
+                severity: 'HIGH',
+                title: 'Unauthenticated Public Application Surface',
+                description: 'Exposed to remote code execution and SSRF via Spring Boot actuator flaw.',
+                mitre_id: 'T1190',
+                affected_asset_id: 'web-dmz',
+              },
+              {
+                type: 'missing_control',
+                severity: 'MEDIUM',
+                title: 'Missing Web Application Firewall WAF Inspection',
+                description: 'HTTP payload inspection missing before reaching web worker nodes.',
+                affected_asset_id: 'web-dmz',
+              },
+            ],
+            risk_score: 6.8,
+            recommended_fix: {
+              control_id: 'ctrl-edr',
+              control_name: 'Host Endpoint Detection and Response',
+              cost: 2000,
+              vulnerabilities_fixed: 2,
+              description: 'Detects in-memory shellcode execution and kills unauthorized child processes.',
+            },
+            outgoing_edges: [
+              {
+                dst: 'jump-01',
+                dst_name: 'Privileged Admin Jumpbox',
+                technique: 'ssh_lateral',
+                mitre_id: 'T1021.004',
+                crosses_zone: true,
+                dst_zone: 'mgmt',
+              },
+              {
+                dst: 'payroll-api',
+                dst_name: 'SWIFT Payment Clearing Microservice',
+                technique: 'db_login',
+                mitre_id: 'T1078',
+                crosses_zone: true,
+                dst_zone: 'prod',
+              },
+            ],
+            flows_through: [
+              {
+                flow_id: 'F1',
+                flow_name: 'Customer Web Banking Traffic',
+                criticality: 3,
+                role: 'destination',
+              },
+              {
+                flow_id: 'F2',
+                flow_name: 'Portal Token Verification API',
+                criticality: 4,
+                role: 'source',
+              },
+            ],
+            crown_jewels_reachable: ['prod-db', 'backup-01'],
+          },
+          {
+            step_index: 2,
+            asset_id: 'jump-01',
+            asset_name: 'Privileged Admin Jumpbox',
+            zone: 'mgmt',
+            criticality: 4,
+            crown_jewel: false,
+            entry_technique: 'ssh_lateral',
+            entry_from: 'web-dmz',
+            vulnerabilities: [
+              {
+                type: 'credential_exposure',
+                severity: 'CRITICAL',
+                title: 'Cached Kerberos Admin Tickets in LSASS Memory',
+                description: 'Domain admin credentials left persistent after automated IT scheduled run.',
+                mitre_id: 'T1003.001',
+                affected_asset_id: 'jump-01',
+              },
+              {
+                type: 'missing_control',
+                severity: 'HIGH',
+                title: 'Lack of Hardware FIDO2 MFA on Management Ingress',
+                description: 'Standard single-factor SSH key accepted without hardware token assertion.',
+                mitre_id: 'T1078',
+                affected_asset_id: 'jump-01',
+              },
+            ],
+            risk_score: 9.2,
+            recommended_fix: {
+              control_id: 'ctrl-mfa',
+              control_name: 'Privileged Access Multi-Factor Authentication',
+              cost: 1500,
+              vulnerabilities_fixed: 2,
+              description: 'Enforces hardware token challenge, preventing credential replay lateral movement.',
+            },
+            outgoing_edges: [
+              {
+                dst: 'prod-db',
+                dst_name: 'Core Banking Ledger Database',
+                technique: 'rdp_lateral',
+                mitre_id: 'T1021.001',
+                crosses_zone: true,
+                dst_zone: 'prod',
+              },
+              {
+                dst: 'backup-01',
+                dst_name: 'Disaster Recovery Storage Vault',
+                technique: 'rdp_lateral',
+                mitre_id: 'T1021.001',
+                crosses_zone: false,
+                dst_zone: 'mgmt',
+              },
+            ],
+            flows_through: [
+              {
+                flow_id: 'F6',
+                flow_name: 'Nightly Cloud Disaster Recovery Backup',
+                criticality: 4,
+                role: 'source',
+              },
+            ],
+            crown_jewels_reachable: ['prod-db', 'backup-01'],
+          },
+          {
+            step_index: 3,
+            asset_id: 'prod-db',
+            asset_name: 'Core Banking Ledger Database',
+            zone: 'prod',
+            criticality: 5,
+            crown_jewel: true,
+            entry_technique: 'rdp_lateral',
+            entry_from: 'jump-01',
+            vulnerabilities: [
+              {
+                type: 'crown_jewel_proximity',
+                severity: 'CRITICAL',
+                title: 'Crown Jewel Database Compromised',
+                description: 'Full write access to account balance ledger and ledger transaction history.',
+                mitre_id: 'T1565.001',
+                affected_asset_id: 'prod-db',
+              },
+            ],
+            risk_score: 10.0,
+            recommended_fix: {
+              control_id: 'ctrl-network-seg',
+              control_name: 'Core Banking Subnet Segmentation',
+              cost: 2500,
+              vulnerabilities_fixed: 1,
+              description: 'Isolates database to internal VPC peering only, blocking jumpbox interactive shells.',
+            },
+            outgoing_edges: [],
+            flows_through: [
+              {
+                flow_id: 'F3',
+                flow_name: 'Payroll Transaction Ledger Commits',
+                criticality: 5,
+                role: 'destination',
+              },
+            ],
+            crown_jewels_reachable: ['prod-db'],
+          },
+        ],
+      },
+    ],
+    summary: {
+      total_vulnerabilities: 5,
+      critical_count: 2,
+      high_count: 2,
+      medium_count: 1,
+      low_count: 0,
+      weakest_node: 'jump-01',
+      weakest_node_score: 9.2,
+      flows_at_risk: ['F1', 'F2', 'F6', 'F3'],
+      crown_jewel_reached: true,
+      prioritized_fixes: [
+        {
+          control_id: 'ctrl-mfa',
+          control_name: 'Privileged Access Multi-Factor Authentication',
+          cost: 1500,
+          protects_nodes: ['jump-01', 'payroll-api'],
+        },
+        {
+          control_id: 'ctrl-edr',
+          control_name: 'Host Endpoint Detection and Response',
+          cost: 2000,
+          protects_nodes: ['web-dmz', 'internet'],
+        },
+        {
+          control_id: 'ctrl-network-seg',
+          control_name: 'Core Banking Subnet Segmentation',
+          cost: 2500,
+          protects_nodes: ['prod-db'],
+        },
+      ],
+      total_fix_cost: 6000,
+    },
+  };
+}
+
+function getFallbackLineage(twinId: string): LineageOut {
+  return {
+    twin_id: twinId,
+    lineage: [
+      {
+        twin_id: 'twin-finbank-golden',
+        parent_id: null,
+        hash: '7f3a9e2d5c1b8401',
+      },
+      {
+        twin_id: 'twin-finbank-mfa-eval',
+        parent_id: 'twin-finbank-golden',
+        hash: 'a9b2c3d4e5f60718',
+      },
+      {
+        twin_id: 'twin-finbank-seg-eval',
+        parent_id: 'twin-finbank-golden',
+        hash: 'e8f1d2c3b4a59687',
+      },
+    ],
+  };
+}
+

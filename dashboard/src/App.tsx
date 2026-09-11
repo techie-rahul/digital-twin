@@ -7,6 +7,8 @@ import { EvidenceView } from './components/EvidenceView';
 import { ChangeConsole } from './components/ChangeConsole';
 import { OptimizerPanel } from './components/OptimizerPanel';
 import { BlastRadiusModal } from './components/BlastRadiusModal';
+import { ChessPieceAuditorView } from './components/ChessPieceAuditorView';
+import { TwinLineageView } from './components/TwinLineageView';
 import { apiClient } from './api/client';
 import { Twin, ChangeVerdict, OptimizationResult, BlastRadiusResponse, SimulationStep, Asset, Edge, ServiceFlow } from './types/api';
 import { DemoPresetId, DecisionHeroData } from './types/presets';
@@ -14,8 +16,8 @@ import { DEMO_PRESETS } from './data/presetsData';
 import { GOLDEN_ASSETS, GOLDEN_EDGES, GOLDEN_FLOWS } from './data/topologyData';
 
 export const App: React.FC = () => {
-  // Top-level presentation mode: 'story' (Executive Decision Story) vs 'evidence' (Technical Audit / Q&A)
-  const [presentationMode, setPresentationMode] = useState<'story' | 'evidence'>('story');
+  // Top-level presentation mode: 'story' | 'evidence' | 'chess-audit' | 'lineage'
+  const [presentationMode, setPresentationMode] = useState<'story' | 'evidence' | 'chess-audit' | 'lineage'>('story');
 
   // Active secondary tab when in custom sandbox testing
   const [activeTab, setActiveTab] = useState<'topology' | 'console' | 'optimizer'>('topology');
@@ -619,6 +621,26 @@ export const App: React.FC = () => {
             controls={twin.controls}
             activePresetId={activePresetId}
             verdict={verdict}
+            onBackToDecisionStory={() => setPresentationMode('story')}
+          />
+        )}
+
+        {/* ================================================================= */}
+        {/* 3. CHESS PIECE AUDITOR MODE (Hop-by-Hop Crawl & Cheapest Fix)    */}
+        {/* ================================================================= */}
+        {presentationMode === 'chess-audit' && (
+          <ChessPieceAuditorView
+            assets={effectiveAssets}
+            controls={twin.controls}
+            onBackToDecisionStory={() => setPresentationMode('story')}
+          />
+        )}
+
+        {/* ================================================================= */}
+        {/* 4. DIGITAL TWIN LINEAGE & CRYPTOGRAPHIC PROVENANCE MODE           */}
+        {/* ================================================================= */}
+        {presentationMode === 'lineage' && (
+          <TwinLineageView
             onBackToDecisionStory={() => setPresentationMode('story')}
           />
         )}

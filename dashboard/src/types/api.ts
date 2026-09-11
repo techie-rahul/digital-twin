@@ -148,3 +148,128 @@ export interface BlastRadiusResponse {
   total_downstream_criticality: number;
   direct_dependencies: string[];
 }
+
+// =====================================================================
+// Crawl Security Auditor (Chess Piece Feature) Types
+// =====================================================================
+
+export type VulnerabilityType =
+  | 'technique_exposure'
+  | 'missing_control'
+  | 'credential_exposure'
+  | 'zone_crossing'
+  | 'flow_risk'
+  | 'crown_jewel_proximity';
+
+export type SeverityLevel = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+
+export interface Vulnerability {
+  type: VulnerabilityType;
+  severity: SeverityLevel;
+  title: string;
+  description: string;
+  mitre_id?: string | null;
+  affected_asset_id: string;
+  related_entity_id?: string | null;
+}
+
+export interface RecommendedFix {
+  control_id: string;
+  control_name: string;
+  cost: number;
+  vulnerabilities_fixed: number;
+  description: string;
+}
+
+export interface OutgoingEdgeInfo {
+  dst: string;
+  dst_name: string;
+  technique: string;
+  mitre_id?: string | null;
+  crosses_zone: boolean;
+  dst_zone: string;
+}
+
+export interface FlowAtRisk {
+  flow_id: string;
+  flow_name: string;
+  criticality: number;
+  role: 'source' | 'destination';
+}
+
+export interface NodeAudit {
+  step_index: number;
+  asset_id: string;
+  asset_name: string;
+  zone: string;
+  criticality: number;
+  crown_jewel: boolean;
+  entry_technique?: string | null;
+  entry_from?: string | null;
+  vulnerabilities: Vulnerability[];
+  risk_score: number;
+  recommended_fix?: RecommendedFix | null;
+  outgoing_edges: OutgoingEdgeInfo[];
+  flows_through: FlowAtRisk[];
+  crown_jewels_reachable: string[];
+}
+
+export interface PrioritizedFix {
+  control_id: string;
+  control_name: string;
+  cost: number;
+  protects_nodes: string[];
+}
+
+export interface AuditSummary {
+  total_vulnerabilities: number;
+  critical_count: number;
+  high_count: number;
+  medium_count: number;
+  low_count: number;
+  weakest_node?: string | null;
+  weakest_node_score: number;
+  flows_at_risk: string[];
+  crown_jewel_reached: boolean;
+  prioritized_fixes: PrioritizedFix[];
+  total_fix_cost: number;
+}
+
+export interface CrawlAuditPath {
+  path: string[];
+  total_hops: number;
+  node_audits: NodeAudit[];
+}
+
+export interface CrawlAuditResult {
+  start_node: string;
+  target_node: string;
+  total_paths: number;
+  paths: CrawlAuditPath[];
+  summary: AuditSummary;
+}
+
+export interface CrawlAuditRequest {
+  twin_id?: string;
+  start_node?: string;
+  target_node?: string | null;
+  active_control_ids?: string[];
+  max_paths?: number;
+  max_depth?: number;
+}
+
+// =====================================================================
+// Twin Lineage & Provenance Types
+// =====================================================================
+
+export interface LineageNodeOut {
+  twin_id: string;
+  parent_id?: string | null;
+  hash: string;
+}
+
+export interface LineageOut {
+  twin_id: string;
+  lineage: LineageNodeOut[];
+}
+

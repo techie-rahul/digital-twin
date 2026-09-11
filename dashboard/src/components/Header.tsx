@@ -4,8 +4,8 @@ import { Shield, RotateCcw, SlidersHorizontal, Layers, ShieldCheck } from 'lucid
 interface HeaderProps {
   activeTab: 'topology' | 'console' | 'optimizer';
   onTabChange: (tab: 'topology' | 'console' | 'optimizer') => void;
-  presentationMode: 'story' | 'evidence';
-  onTogglePresentationMode: (mode: 'story' | 'evidence') => void;
+  presentationMode: 'story' | 'evidence' | 'chess-audit' | 'lineage';
+  onTogglePresentationMode: (mode: 'story' | 'evidence' | 'chess-audit' | 'lineage') => void;
   isBackendLive: boolean;
   onReset: () => void;
 }
@@ -19,10 +19,10 @@ export const Header: React.FC<HeaderProps> = ({
   onReset,
 }) => {
   return (
-    <header className="border-b border-canvas-border bg-white sticky top-0 z-50 px-6 py-3.5 transition-all">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+    <header className="border-b border-canvas-border bg-white sticky top-0 z-50 px-6 py-3 transition-all">
+      <div className="max-w-[1440px] mx-auto flex flex-col xl:flex-row items-center justify-between gap-3">
         {/* Brand & System Information */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <div className="w-9 h-9 rounded-lg bg-brand-orange text-white flex items-center justify-center shadow-subtle">
             <Shield className="w-5 h-5" />
           </div>
@@ -41,11 +41,11 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* View Toggle: [ 🎯 Decision Story ] | [ 🔍 Full Architecture & Evidence ] */}
-        <div className="flex items-center p-1 rounded-xl bg-ash-100 border border-ash-200 font-sans shadow-subtle">
+        {/* View Toggle: [ 🎯 Decision Story ] | [ 🔍 Evidence ] | [ ♟️ Chess Piece Auditor ] | [ 🧬 Twin Lineage ] */}
+        <div className="flex items-center p-1 rounded-xl bg-ash-100 border border-ash-200 font-sans shadow-subtle shrink-0">
           <button
             onClick={() => onTogglePresentationMode('story')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               presentationMode === 'story'
                 ? 'bg-white text-ash-900 shadow-subtle border border-ash-200 ring-1 ring-brand-orange/30'
                 : 'text-ash-500 hover:text-ash-800'
@@ -55,18 +55,39 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
           <button
             onClick={() => onTogglePresentationMode('evidence')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               presentationMode === 'evidence'
                 ? 'bg-white text-brand-orange shadow-subtle border border-ash-200 ring-1 ring-brand-orange/30'
                 : 'text-ash-500 hover:text-ash-800'
             }`}
           >
-            <span>🔍 Full Architecture & Evidence</span>
+            <span>🔍 Evidence</span>
+          </button>
+          <button
+            onClick={() => onTogglePresentationMode('chess-audit')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              presentationMode === 'chess-audit'
+                ? 'bg-white text-brand-orange shadow-subtle border border-ash-200 ring-1 ring-brand-orange/30'
+                : 'text-ash-500 hover:text-ash-800'
+            }`}
+          >
+            <span>♟️ Chess Piece Auditor</span>
+          </button>
+          <button
+            onClick={() => onTogglePresentationMode('lineage')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              presentationMode === 'lineage'
+                ? 'bg-white text-brand-orange shadow-subtle border border-ash-200 ring-1 ring-brand-orange/30'
+                : 'text-ash-500 hover:text-ash-800'
+            }`}
+          >
+            <span>🧬 Twin Lineage</span>
           </button>
         </div>
 
-        {/* View Navigation Tabs (ui-sh / shadcn tab group) */}
-        <div className="hidden lg:flex items-center p-1 rounded-lg bg-ash-100 border border-ash-200 font-sans">
+        {/* View Navigation Tabs (ui-sh / shadcn tab group) — Shown in Decision Story Mode */}
+        {presentationMode === 'story' && (
+          <div className="hidden lg:flex items-center p-1 rounded-lg bg-ash-100 border border-ash-200 font-sans shrink-0">
           <button
             onClick={() => {
               onTogglePresentationMode('story');
@@ -112,6 +133,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span>Optimizer</span>
           </button>
         </div>
+        )}
 
         {/* Engine Status & Reset Trigger */}
         <div className="flex items-center gap-3">
