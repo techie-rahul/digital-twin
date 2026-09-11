@@ -27,6 +27,21 @@ from backend.core.search import (
     GLOBAL_SEARCH_CACHE,
 )
 
+from backend.core.walk import (
+    simulate,
+    Result,
+    SimulationResult,
+    EvaluatedRoute,
+    TrialRecord,
+    evaluate_routes,
+    compute_p_edge_eff,
+    compute_p_route,
+    compute_modelled_effort_score,
+    compute_route_noise,
+    compute_route_utility,
+    execute_trial,
+)
+
 __all__ = [
     "Asset",
     "Identity",
@@ -47,6 +62,18 @@ __all__ = [
     "SearchBudgetExceeded",
     "SearchCache",
     "GLOBAL_SEARCH_CACHE",
+    "simulate",
+    "Result",
+    "SimulationResult",
+    "EvaluatedRoute",
+    "TrialRecord",
+    "evaluate_routes",
+    "compute_p_edge_eff",
+    "compute_p_route",
+    "compute_modelled_effort_score",
+    "compute_route_noise",
+    "compute_route_utility",
+    "execute_trial",
 ]
 
 
