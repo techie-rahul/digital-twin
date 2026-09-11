@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" class="light" style="background-color: #FAFAFA !important; color: #18181B !important; color-scheme: only light !important; forced-color-adjust: none !important;">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Disarm Dark Reader Extension -->
+    <meta name="darkreader-lock" />
+    <!-- Disarm Chrome/Edge/Brave Auto-Dark Inversion -->
+    <meta name="color-scheme" content="only light" />
+    <meta name="supported-color-schemes" content="light" />
+    <!-- Prevent Browser Caching of HTML -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FF5500' stroke-width='2'><circle cx='12' cy='12' r='9'/><path d='M12 3v18'/><path d='M3 12h18'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FinBank Digital Twin | Security Change Sandbox</title>
+
+    <!-- Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Anti-Dark Shield & Stale Cache Eviction Script -->
+    <script>
+      (function() {
+        // Enforce light root
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+        document.documentElement.style.backgroundColor = '#FAFAFA';
+        document.documentElement.style.color = '#18181B';
+        document.documentElement.style.colorScheme = 'only light';
+
+        // Clear rogue service workers and caches from previous localhost projects
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            for (var r of regs) r.unregister();
+          });
+        }
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            for (var name of names) caches.delete(name);
+          });
+        }
+        try {
+          localStorage.removeItem('theme');
+          localStorage.removeItem('color-theme');
+          sessionStorage.removeItem('theme');
+        } catch(e) {}
+      })();
+    </script>
+  </head>
+  <body class="bg-[#FAFAFA] text-[#18181B] selection:bg-[#FF5500]/15 selection:text-[#FF5500] antialiased overflow-x-hidden" style="background-color: #FAFAFA !important; color: #18181B !important; color-scheme: only light !important; forced-color-adjust: none !important;">
+    <div id="root" style="background-color: #FAFAFA !important; color: #18181B !important; color-scheme: only light !important; forced-color-adjust: none !important;"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
