@@ -1,0 +1,144 @@
+{
+  "id": "twin-hospital-ehr-system",
+  "assets": [
+    {
+      "id": "hosp-patient-kiosk",
+      "name": "Patient Check-in Kiosk",
+      "kind": "workstation",
+      "zone": "dmz",
+      "criticality": 1,
+      "crown_jewel": false
+    },
+    {
+      "id": "hosp-triage-station",
+      "name": "Nurse Triage Station",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "hosp-intranet-gateway",
+      "name": "Hospital Core Gateway Hub",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "hosp-ehr-app",
+      "name": "Electronic Health Records Application Server",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "hosp-pacs-imaging",
+      "name": "Radiology PACS Imaging Server",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "hosp-patient-db",
+      "name": "Patient Health Records Database",
+      "kind": "database",
+      "zone": "prod",
+      "criticality": 5,
+      "crown_jewel": true
+    }
+  ],
+  "identities": [
+    {
+      "id": "id-nurse-staff",
+      "name": "Registered Clinical Nurse",
+      "kind": "user",
+      "tier": 2
+    },
+    {
+      "id": "id-svc-hl7",
+      "name": "HL7 Patient Sync Service Account",
+      "kind": "service_account",
+      "tier": 1
+    }
+  ],
+  "edges": [
+    {
+      "src": "hosp-patient-kiosk",
+      "dst": "hosp-triage-station",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "hosp-triage-station",
+      "dst": "hosp-intranet-gateway",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "hosp-intranet-gateway",
+      "dst": "hosp-ehr-app",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "hosp-ehr-app",
+      "dst": "hosp-patient-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "hosp-intranet-gateway",
+      "dst": "hosp-pacs-imaging",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "hosp-pacs-imaging",
+      "dst": "hosp-patient-db",
+      "technique": "db_login"
+    }
+  ],
+  "flows": [
+    {
+      "id": "flow-vital-signs",
+      "name": "Realtime Triage to EHR Vital Signs Stream",
+      "src": "hosp-triage-station",
+      "dst": "hosp-ehr-app",
+      "technique": "ssh_lateral",
+      "criticality": 5
+    },
+    {
+      "id": "flow-hl7-records",
+      "name": "EHR Application to Medical Database Ledger Sync",
+      "src": "hosp-ehr-app",
+      "dst": "hosp-patient-db",
+      "technique": "db_login",
+      "criticality": 5
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-hipaa-edr",
+      "name": "Hospital Endpoint Detection & Response",
+      "cost": 2000,
+      "blocks": [
+        "smb_lateral"
+      ],
+      "scope": [
+        "hosp-triage-station",
+        "hosp-pacs-imaging"
+      ],
+      "efficacy": 0.9
+    },
+    {
+      "id": "ctrl-strict-firewall",
+      "name": "Core Patient Database Port Segmentation",
+      "cost": 3500,
+      "blocks": [
+        "db_login"
+      ],
+      "scope": [
+        "hosp-patient-db"
+      ],
+      "efficacy": 0.95
+    }
+  ]
+}

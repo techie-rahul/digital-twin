@@ -130,6 +130,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.twin_registry = twin_registry
     app.state.agent_registry = agent_registry
     app.state.golden_twin = golden_twin
+    app.state.active_twin_id = golden_twin.id if golden_twin else (next(iter(twin_registry.keys())) if twin_registry else "twin-finbank-golden")
+
 
     # ── YIELD (server runs here) ──────────────────────────────────────────
     yield

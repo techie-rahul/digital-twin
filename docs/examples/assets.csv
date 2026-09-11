@@ -1,0 +1,11 @@
+id,name,kind,zone,criticality,crown_jewel
+backup-01,Disaster Recovery Backup Vault,server,mgmt,4,true
+ci-runner,CI/CD Build & Deployment Runner,server,corp,3,false
+fileshare,Corporate File Share,share,corp,3,false
+internet,External Internet Gateway,server,dmz,1,false
+jump-01,Privileged Admin Jump Host,server,mgmt,4,false
+payroll-api,Payroll & Payment Processing API,server,prod,4,false
+prod-db,Core Production Database,database,prod,5,true
+web-dmz,Online Banking Web DMZ,server,dmz,3,false
+ws-dev,Developer Workstation,workstation,corp,2,false
+ws-hr,HR Operations Workstation,workstation,corp,2,false

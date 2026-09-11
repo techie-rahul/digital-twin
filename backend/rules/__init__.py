@@ -43,6 +43,7 @@ from backend.rules.audit import (
     crawl_audit,
 )
 
+
 __all__ = [
     "TechniqueDefinition",
     "load_techniques",

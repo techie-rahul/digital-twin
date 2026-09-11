@@ -22,9 +22,12 @@ class SimulateRequest(BaseModel):
     twin_id: str = Field(..., description="ID of the Twin to simulate against.")
     agent_id: str = Field(..., description="Agent ID defined inside the Twin.")
     n: int = Field(100, ge=1, le=2000, description="Number of Monte Carlo trials.")
+    n_walks: Optional[int] = Field(None, description="Optional alias for n.")
     seed: int = Field(42, description="Deterministic RNG seed.")
     target: Optional[str] = Field(None, description="Target asset ID. Defaults to crown jewel.")
+    guided: bool = Field(True, description="Enable adaptive ML heuristic guidance.")
     control_ids: List[str] = Field(default_factory=list, description="Optional active control IDs to simulate with.")
+
 
 
 class CloneRequest(BaseModel):
@@ -152,12 +155,20 @@ class SimulateOut(BaseModel):
     seed: int
     p_success: float
     mean_effort: float
+    p90_effort: Optional[float] = 0.0
     mean_noise: float
     detection_rate: float
     success_count: int
     failure_count: int
     candidate_routes: List[EvaluatedRouteOut]
+    compromised_nodes: List[str] = Field(default_factory=list)
+    attack_trajectory: List[Dict[str, Any]] = Field(default_factory=list)
+    choke_points: Dict[str, float] = Field(default_factory=dict)
+    exemplar_paths: List[List[str]] = Field(default_factory=list)
     cached: bool = False
+    states_explored: int = 0
+    search_efficiency_pct: float = 0.0
+    guidance_mode: str = "adaptive_ml"
 
 
 class BlastRadiusOut(BaseModel):
@@ -199,3 +210,37 @@ class HealthOut(BaseModel):
     golden_twin_id: Optional[str]
     golden_hash: Optional[str]
     cache_size: int
+
+
+class TwinListItemOut(BaseModel):
+    """Summary of a twin in GET /twins."""
+    id: str
+    parent_id: Optional[str] = None
+    hash: str
+    asset_count: int
+    edge_count: int
+    control_count: int
+    flow_count: int
+
+
+class ImportSummaryOut(BaseModel):
+    """Response returned upon successful Twin import."""
+    status: str = "success"
+    message: str
+    twin_id: str
+    parent_id: Optional[str] = None
+    hash: str
+    asset_count: int
+    identity_count: int
+    edge_count: int
+    flow_count: int
+    control_count: int
+
+
+class ValidationErrorOut(BaseModel):
+    """Response returned upon failed Twin import validation."""
+    status: str = "error"
+    message: str
+    errors: List[str] = Field(default_factory=list)
+
+

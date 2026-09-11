@@ -1,0 +1,170 @@
+{
+  "schema_version": "2.1",
+  "id": "twin-healthcare-hospital",
+  "parent_id": null,
+  "assets": [
+    {
+      "id": "ehr-core-db",
+      "name": "Electronic Health Records Vault",
+      "kind": "database",
+      "zone": "prod",
+      "criticality": 5,
+      "crown_jewel": true
+    },
+    {
+      "id": "hl7-interface-gw",
+      "name": "HL7 Clinical Integration Gateway",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "iot-device-gw",
+      "name": "ICU Infusion Pump Gateway",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "nurse-workstation-01",
+      "name": "ER Ward Terminal",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "patient-portal-dmz",
+      "name": "Patient Web Portal",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "radiology-pacs-srv",
+      "name": "Radiology Imaging PACS Server",
+      "kind": "server",
+      "zone": "corp",
+      "criticality": 4,
+      "crown_jewel": false
+    }
+  ],
+  "identities": [
+    {
+      "id": "id-doc-chief",
+      "name": "Chief Medical Officer",
+      "kind": "admin",
+      "tier": 0
+    },
+    {
+      "id": "id-nurse-staff",
+      "name": "ER Staff Nurse",
+      "kind": "user",
+      "tier": 2
+    },
+    {
+      "id": "id-svc-ehr",
+      "name": "EHR Sync Daemon Account",
+      "kind": "service_account",
+      "tier": 1
+    }
+  ],
+  "edges": [
+    {
+      "src": "hl7-interface-gw",
+      "dst": "ehr-core-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-doc-chief",
+      "dst": "hl7-interface-gw",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-nurse-staff",
+      "dst": "nurse-workstation-01",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-svc-ehr",
+      "dst": "ehr-core-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "iot-device-gw",
+      "dst": "ehr-core-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "nurse-workstation-01",
+      "dst": "iot-device-gw",
+      "technique": "rdp_lateral"
+    },
+    {
+      "src": "nurse-workstation-01",
+      "dst": "radiology-pacs-srv",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "patient-portal-dmz",
+      "dst": "hl7-interface-gw",
+      "technique": "exploit_public_app"
+    },
+    {
+      "src": "radiology-pacs-srv",
+      "dst": "hl7-interface-gw",
+      "technique": "ssh_lateral"
+    }
+  ],
+  "flows": [
+    {
+      "id": "F-EHR-LOOKUP",
+      "name": "Emergency Patient Vitals Feed",
+      "src": "nurse-workstation-01",
+      "dst": "ehr-core-db",
+      "technique": "db_login",
+      "criticality": 5
+    },
+    {
+      "id": "F-PACS-ARCHIVE",
+      "name": "Radiology Imaging Sync Feed",
+      "src": "radiology-pacs-srv",
+      "dst": "hl7-interface-gw",
+      "technique": "ssh_lateral",
+      "criticality": 4
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-edr-clinical",
+      "name": "Clinical EDR Sensor",
+      "cost": 1500,
+      "blocks": [
+        "cred_dump",
+        "smb_lateral"
+      ],
+      "scope": [
+        "nurse-workstation-01",
+        "radiology-pacs-srv"
+      ],
+      "efficacy": 0.88
+    },
+    {
+      "id": "ctrl-hipaa-mfa",
+      "name": "HIPAA Biometric MFA Gateway",
+      "cost": 2000,
+      "blocks": [
+        "rdp_lateral",
+        "ssh_lateral"
+      ],
+      "scope": [
+        "hl7-interface-gw",
+        "iot-device-gw"
+      ],
+      "efficacy": 0.92
+    }
+  ]
+}

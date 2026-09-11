@@ -1,8 +1,8 @@
-# Status — FinBank Cyber Digital Twin API
+# Status — FinBank Cyber Digital Twin & Adaptive ML Sandbox
 
-**Branch**: `feat/api-integration`  
-**Owner**: Person 4 (API / Integration / Demo Lead)  
-**Tests**: 198 passing (0 failures)
+**Branch**: `aryan`  
+**Owner**: Person 4 (API / Integration / ML Simulation Lead)  
+**Tests**: 256 passing (0 failures)
 
 ---
 
@@ -17,9 +17,10 @@
 | Phase 4 — Agent walk | Core | ✅ Done | Algorithm B: plan-then-execute, `simulate`, `Result` |
 | Phase 5 — Results & Metrics | Person 1 | ✅ Merged & Wired | `backend/core/results.py` merged from main; `/simulate` enriched with `compute_results` |
 | Phase 6 — Control Evaluation | Person 2 | ✅ Merged & Wired | `backend/rules/evaluate.py` merged from main; `/evaluate-change` LIVE |
-| Phase 7 — Optimiser | Person 4 + 2 | ⏳ Pending / Stubbed | `/optimize` and `/matrix` currently stubbed with schema-correct mocks |
-| **Phase 8 — API** | **Person 4** | **✅ Done** | All 8 endpoints live & functional |
-| Phase 9 — Dashboard | Person 3 | 🔄 In Progress | Vite + React frontend |
+| Phase 7/8 — Control Optimizer | Rules | ✅ Done | `backend/rules/optimize.py` — full exhaustive subset optimization |
+| Phase 8 — API & Integration | Person 4 | ✅ Done | All endpoints live & functional with in-memory caching |
+| **Adaptive ML Guidance** | **Person 4** | **✅ Done** | `backend/ml/` — 10D features, HistGradientBoosting, informed A* priority search |
+| Phase 9 — Dashboard | Person 3 | ✅ Built | Vite + React frontend in `dashboard/` |
 
 ---
 
@@ -28,14 +29,14 @@
 | Endpoint | Real | Notes |
 |----------|------|-------|
 | `GET /` | ✅ Real | Health check + loaded golden twin status |
+| `GET /ml/status` | ✅ Real | Live ML model status, accuracy (81.8%), ROC-AUC (0.849), explainability |
 | `GET /twin/{id}` | ✅ Real | Full twin serialization |
 | `POST /twin/{id}/clone` | ✅ Real | Control mutations + registry |
-| `POST /simulate` | ✅ Real | Real engine (search + walk) + Phase 5 `compute_results` statistical enrichment |
+| `POST /simulate` | ✅ Real | Real engine + Phase 5 `compute_results` + ML telemetry (`states_explored`, `efficiency_gain`) |
 | `POST /evaluate-change` | ✅ Real | **LIVE** — Calls Person 2's `backend.rules.evaluate.evaluate_change()`, returning full `ChangeVerdict` |
 | `GET /blast-radius/{asset_id}` | ✅ Real | `nx.descendants` on twin graph with crown jewel detection |
 | `GET /lineage/{twin_id}` | ✅ Real | parent_id chain traversal |
-| `POST /optimize` | 🟡 Stubbed | Schema-correct stub awaiting Phase 7 optimizer engine |
-| `GET /matrix/{twin_id}` | 🟡 Stubbed | Schema-correct stub awaiting Phase 7 matrix engine |
+| `POST /optimize` | ✅ Real | Knapsack-constrained security portfolio optimization |
 
 ---
 

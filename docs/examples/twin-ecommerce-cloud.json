@@ -1,0 +1,170 @@
+{
+  "schema_version": "2.1",
+  "id": "twin-ecommerce-cloud",
+  "parent_id": null,
+  "assets": [
+    {
+      "id": "customer-credit-vault",
+      "name": "Cardholder Data Lake",
+      "kind": "database",
+      "zone": "prod",
+      "criticality": 5,
+      "crown_jewel": true
+    },
+    {
+      "id": "customer-internet",
+      "name": "Cloudflare Edge Proxy",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 1,
+      "crown_jewel": false
+    },
+    {
+      "id": "dev-laptop",
+      "name": "DevOps Engineer Workstation",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "order-microservice",
+      "name": "Order Processing Engine",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "payment-bridge",
+      "name": "Stripe PCI Payment Gateway",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "storefront-web",
+      "name": "React Web Storefront",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "vpn-bastion",
+      "name": "Cloud VPN Concentrator",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 3,
+      "crown_jewel": false
+    }
+  ],
+  "identities": [
+    {
+      "id": "id-lead-devops",
+      "name": "Lead Cloud DevOps Architect",
+      "kind": "admin",
+      "tier": 0
+    },
+    {
+      "id": "id-svc-checkout",
+      "name": "Checkout Microservice Daemon",
+      "kind": "service_account",
+      "tier": 1
+    }
+  ],
+  "edges": [
+    {
+      "src": "customer-internet",
+      "dst": "storefront-web",
+      "technique": "exploit_public_app"
+    },
+    {
+      "src": "dev-laptop",
+      "dst": "vpn-bastion",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "id-lead-devops",
+      "dst": "vpn-bastion",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-svc-checkout",
+      "dst": "order-microservice",
+      "technique": "db_login"
+    },
+    {
+      "src": "order-microservice",
+      "dst": "customer-credit-vault",
+      "technique": "db_login"
+    },
+    {
+      "src": "payment-bridge",
+      "dst": "customer-credit-vault",
+      "technique": "db_login"
+    },
+    {
+      "src": "storefront-web",
+      "dst": "order-microservice",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "vpn-bastion",
+      "dst": "order-microservice",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "vpn-bastion",
+      "dst": "payment-bridge",
+      "technique": "rdp_lateral"
+    }
+  ],
+  "flows": [
+    {
+      "id": "F-CHECKOUT",
+      "name": "Real-time Order Processing Flow",
+      "src": "storefront-web",
+      "dst": "order-microservice",
+      "technique": "ssh_lateral",
+      "criticality": 5
+    },
+    {
+      "id": "F-PAYMENT",
+      "name": "PCI Card Settlement Pipeline",
+      "src": "order-microservice",
+      "dst": "customer-credit-vault",
+      "technique": "db_login",
+      "criticality": 5
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-cloud-waf",
+      "name": "Cloudflare Managed WAF",
+      "cost": 1200,
+      "blocks": [
+        "exploit_public_app"
+      ],
+      "scope": [
+        "storefront-web"
+      ],
+      "efficacy": 0.85
+    },
+    {
+      "id": "ctrl-ztna-bastion",
+      "name": "Zero-Trust Network Access on Bastion",
+      "cost": 2400,
+      "blocks": [
+        "rdp_lateral",
+        "ssh_lateral"
+      ],
+      "scope": [
+        "order-microservice",
+        "vpn-bastion"
+      ],
+      "efficacy": 0.95
+    }
+  ]
+}

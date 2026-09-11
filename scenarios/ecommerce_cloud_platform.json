@@ -1,0 +1,130 @@
+{
+  "id": "twin-ecommerce-cloud-platform",
+  "assets": [
+    {
+      "id": "ecom-web-cdn",
+      "name": "Customer Storefront CDN Edge",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "ecom-order-service",
+      "name": "Order Checkout Microservice",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "ecom-payment-bridge",
+      "name": "Stripe Payment API Bridge",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "ecom-analytics-node",
+      "name": "BigQuery Streaming Worker",
+      "kind": "server",
+      "zone": "corp",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "ecom-vault-db",
+      "name": "PCI-DSS Tokenized Payment Vault",
+      "kind": "database",
+      "zone": "prod",
+      "criticality": 5,
+      "crown_jewel": true
+    }
+  ],
+  "identities": [
+    {
+      "id": "id-shopper",
+      "name": "Public E-Commerce Shopper",
+      "kind": "user",
+      "tier": 3
+    },
+    {
+      "id": "id-svc-checkout",
+      "name": "Checkout Backend Service Account",
+      "kind": "service_account",
+      "tier": 1
+    }
+  ],
+  "edges": [
+    {
+      "src": "ecom-web-cdn",
+      "dst": "ecom-order-service",
+      "technique": "exploit_public_app"
+    },
+    {
+      "src": "ecom-order-service",
+      "dst": "ecom-payment-bridge",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "ecom-payment-bridge",
+      "dst": "ecom-vault-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "ecom-web-cdn",
+      "dst": "ecom-analytics-node",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "ecom-analytics-node",
+      "dst": "ecom-payment-bridge",
+      "technique": "ssh_lateral"
+    }
+  ],
+  "flows": [
+    {
+      "id": "flow-order-checkout",
+      "name": "Customer Web Checkout Stream",
+      "src": "ecom-web-cdn",
+      "dst": "ecom-order-service",
+      "technique": "exploit_public_app",
+      "criticality": 5
+    },
+    {
+      "id": "flow-payment-settle",
+      "name": "Payment Gateway Transaction Tokenization",
+      "src": "ecom-payment-bridge",
+      "dst": "ecom-vault-db",
+      "technique": "db_login",
+      "criticality": 5
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-cloud-waf",
+      "name": "Cloudflare WAF on Checkout Endpoint",
+      "cost": 1800,
+      "blocks": [
+        "exploit_public_app"
+      ],
+      "scope": [
+        "ecom-order-service"
+      ],
+      "efficacy": 0.9
+    },
+    {
+      "id": "ctrl-api-tokenization",
+      "name": "Mutual TLS & API Token Isolation",
+      "cost": 2500,
+      "blocks": [
+        "ssh_lateral"
+      ],
+      "scope": [
+        "ecom-payment-bridge"
+      ],
+      "efficacy": 0.95
+    }
+  ]
+}

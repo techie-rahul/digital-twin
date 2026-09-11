@@ -13,6 +13,8 @@ ENV/
 node_modules/
 dashboard/node_modules/
 dashboard/dist/
+.DS_Store
+Thumbs.db
 test-dashboard/
 .playwright-mcp/
 frontend/

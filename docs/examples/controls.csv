@@ -1,0 +1,5 @@
+id,name,cost,blocks,scope,efficacy
+ctrl-credguard,Windows Credential Guard & LSA Isolation,1000,T1003;cred_dump;credential_guard,jump-01;ws-dev,0.9
+ctrl-edr,Host Endpoint Detection and Response,2000,T1003;T1068;cred_dump;edr;priv_esc_local,ci-runner;ws-dev;ws-hr,0.85
+ctrl-mfa,Privileged Access Multi-Factor Authentication,1500,T1021.001;T1021.004;T1078;db_login;mfa;rdp_lateral;ssh_lateral,jump-01;payroll-api,0.95
+ctrl-network-seg,Core Banking Network Segmentation,2500,T1021.001;T1021.002;T1021.004;T1190;db_login;exploit_public_app;network_segmentation;rdp_lateral;smb_lateral;ssh_lateral,backup-01;prod-db,0.9

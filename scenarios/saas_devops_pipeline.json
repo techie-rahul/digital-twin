@@ -1,0 +1,143 @@
+{
+  "id": "twin-saas-devops-pipeline",
+  "assets": [
+    {
+      "id": "saas-github-webhook",
+      "name": "Public CI/CD Webhook Ingress",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "saas-jenkins-worker",
+      "name": "Ephemeral Build & Test Container",
+      "kind": "server",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "saas-k8s-control-plane",
+      "name": "Kubernetes Master API Node",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "saas-tenant-app",
+      "name": "Multi-tenant Customer Frontend Pod",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "saas-staging-db",
+      "name": "Pre-production Staging Database",
+      "kind": "database",
+      "zone": "prod",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "saas-prod-customer-db",
+      "name": "Production Multi-tenant Database",
+      "kind": "database",
+      "zone": "prod",
+      "criticality": 5,
+      "crown_jewel": true
+    }
+  ],
+  "identities": [
+    {
+      "id": "id-devops-engineer",
+      "name": "Lead Platform SRE Engineer",
+      "kind": "admin",
+      "tier": 0
+    },
+    {
+      "id": "id-svc-ci-deployer",
+      "name": "ArgoCD Continuous Delivery Service Account",
+      "kind": "service_account",
+      "tier": 1
+    }
+  ],
+  "edges": [
+    {
+      "src": "saas-github-webhook",
+      "dst": "saas-jenkins-worker",
+      "technique": "exploit_public_app"
+    },
+    {
+      "src": "saas-jenkins-worker",
+      "dst": "saas-k8s-control-plane",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "saas-k8s-control-plane",
+      "dst": "saas-tenant-app",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "saas-k8s-control-plane",
+      "dst": "saas-prod-customer-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "saas-tenant-app",
+      "dst": "saas-prod-customer-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "saas-jenkins-worker",
+      "dst": "saas-staging-db",
+      "technique": "db_login"
+    }
+  ],
+  "flows": [
+    {
+      "id": "flow-ci-cd-sync",
+      "name": "Jenkins Build to Kubernetes Master Deployment Sync",
+      "src": "saas-jenkins-worker",
+      "dst": "saas-k8s-control-plane",
+      "technique": "ssh_lateral",
+      "criticality": 3
+    },
+    {
+      "id": "flow-prod-queries",
+      "name": "Customer Tenant Application SQL Queries",
+      "src": "saas-tenant-app",
+      "dst": "saas-prod-customer-db",
+      "technique": "db_login",
+      "criticality": 5
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-k8s-bastion-mfa",
+      "name": "Zero-Trust Identity Bastion on K8s Control Plane",
+      "cost": 2200,
+      "blocks": [
+        "ssh_lateral"
+      ],
+      "scope": [
+        "saas-k8s-control-plane"
+      ],
+      "efficacy": 0.95
+    },
+    {
+      "id": "ctrl-db-lockdown",
+      "name": "Production Database Direct Port Lockdown",
+      "cost": 1500,
+      "blocks": [
+        "db_login"
+      ],
+      "scope": [
+        "saas-prod-customer-db"
+      ],
+      "efficacy": 0.99
+    }
+  ]
+}

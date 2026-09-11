@@ -1,0 +1,177 @@
+{
+  "schema_version": "2.1",
+  "id": "twin-enterprise-saas",
+  "parent_id": null,
+  "assets": [
+    {
+      "id": "admin-jump-host",
+      "name": "Tier-0 Bastion Jump Host",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "corp-hr-laptop",
+      "name": "HR Admin Workstation",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "corp-it-workstation",
+      "name": "IT Systems Admin Workstation",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "customer-tenant-db",
+      "name": "Multi-Tenant Customer Data Vault",
+      "kind": "database",
+      "zone": "prod",
+      "criticality": 5,
+      "crown_jewel": true
+    },
+    {
+      "id": "domain-controller",
+      "name": "Corporate Active Directory (DC01)",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 5,
+      "crown_jewel": false
+    },
+    {
+      "id": "k8s-cluster-prod",
+      "name": "Production Kubernetes Workload Cluster",
+      "kind": "server",
+      "zone": "prod",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "saas-ext-api",
+      "name": "Public Customer SaaS API Gateway",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 2,
+      "crown_jewel": false
+    }
+  ],
+  "identities": [
+    {
+      "id": "id-global-admin",
+      "name": "Azure/AD Global Domain Admin",
+      "kind": "admin",
+      "tier": 0
+    },
+    {
+      "id": "id-it-technician",
+      "name": "Helpdesk Tier-1 Support",
+      "kind": "user",
+      "tier": 2
+    },
+    {
+      "id": "id-svc-k8s-operator",
+      "name": "Kubernetes Service Broker Account",
+      "kind": "service_account",
+      "tier": 1
+    }
+  ],
+  "edges": [
+    {
+      "src": "admin-jump-host",
+      "dst": "domain-controller",
+      "technique": "rdp_lateral"
+    },
+    {
+      "src": "corp-hr-laptop",
+      "dst": "domain-controller",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "corp-it-workstation",
+      "dst": "admin-jump-host",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "domain-controller",
+      "dst": "customer-tenant-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-global-admin",
+      "dst": "admin-jump-host",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-it-technician",
+      "dst": "corp-it-workstation",
+      "technique": "db_login"
+    },
+    {
+      "src": "id-svc-k8s-operator",
+      "dst": "k8s-cluster-prod",
+      "technique": "db_login"
+    },
+    {
+      "src": "k8s-cluster-prod",
+      "dst": "customer-tenant-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "saas-ext-api",
+      "dst": "k8s-cluster-prod",
+      "technique": "exploit_public_app"
+    }
+  ],
+  "flows": [
+    {
+      "id": "F-DATA-COMMIT",
+      "name": "Database Transaction Commit Feed",
+      "src": "k8s-cluster-prod",
+      "dst": "customer-tenant-db",
+      "technique": "db_login",
+      "criticality": 5
+    },
+    {
+      "id": "F-TENANT-SYNC",
+      "name": "Customer Query Routing Pipeline",
+      "src": "saas-ext-api",
+      "dst": "k8s-cluster-prod",
+      "technique": "exploit_public_app",
+      "criticality": 4
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-ad-tiering",
+      "name": "Active Directory Tiering & LAPS Isolation",
+      "cost": 2800,
+      "blocks": [
+        "rdp_lateral",
+        "smb_lateral"
+      ],
+      "scope": [
+        "admin-jump-host",
+        "domain-controller"
+      ],
+      "efficacy": 0.94
+    },
+    {
+      "id": "ctrl-k8s-network-policy",
+      "name": "Cilium Calico Microsegmentation",
+      "cost": 1900,
+      "blocks": [
+        "exploit_public_app",
+        "ssh_lateral"
+      ],
+      "scope": [
+        "k8s-cluster-prod"
+      ],
+      "efficacy": 0.89
+    }
+  ]
+}

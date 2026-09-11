@@ -1,0 +1,5 @@
+id,name,kind,tier
+id-svc-payroll,Payroll Settlement Service Account,service_account,1
+id-user-admin,Cloud Infrastructure Administrator,admin,0
+id-user-analyst,Financial Operations Analyst,user,2
+id-user-customer,Retail Banking Customer,user,3
