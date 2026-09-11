@@ -26,6 +26,12 @@ from backend.rules.evaluate import (
     evaluate_change,
     EXACT_MFA_SERVICE_IDENTITY_MSG,
 )
+from backend.rules.optimize import (
+    CandidateEvaluation,
+    Portfolio,
+    optimize,
+    optimize_controls,
+)
 
 __all__ = [
     "TechniqueDefinition",
@@ -48,5 +54,9 @@ __all__ = [
     "compute_confidence",
     "evaluate_change",
     "EXACT_MFA_SERVICE_IDENTITY_MSG",
+    "CandidateEvaluation",
+    "Portfolio",
+    "optimize",
+    "optimize_controls",
 ]
 
