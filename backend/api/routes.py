@@ -35,8 +35,8 @@ from backend.api import cache as result_cache
 from backend.api.schemas import (
     AssetOut, BlastRadiusOut, CloneOut, CloneRequest, ControlOut,
     CrawlAuditRequest, EdgeOut, EvaluateChangeRequest, EvaluatedRouteOut, HealthOut,
-    IdentityOut, LineageNodeOut, LineageOut, OptimizeRequest,
-    ServiceFlowOut, SimulateOut, SimulateRequest, TwinOut,
+    IdentityOut, ImportTwinOut, LineageNodeOut, LineageOut, OptimizeRequest,
+    ServiceFlowOut, SimulateOut, SimulateRequest, TwinOut, TwinSummaryOut,
 )
 from backend.api.stubs import stub_matrix
 
@@ -69,14 +69,100 @@ def _get_agent(dt: CyberDigitalTwin, agent_id: str) -> Agent:
     )
 
 
-def _resolve_agent(request: Request, agent_id: str) -> Agent:
+def _detect_twin_ingress_zones(dt: Optional[CyberDigitalTwin]) -> tuple[str, ...]:
+    """Identify ingress or untrusted zones in a twin, falling back to all zones or dmz."""
+    if not dt or not dt.twin.assets:
+        return ("dmz", "public", "external")
+    zones = {
+        a.zone for a in dt.twin.assets
+        if any(k in a.zone.lower() for k in ("dmz", "public", "external", "ingress", "untrusted", "wan", "internet"))
+    }
+    if not zones and dt.twin.assets:
+        zones = {dt.twin.assets[0].zone}
+    return tuple(sorted(zones)) if zones else ("dmz",)
+
+
+def _ingress_nodes(dt: CyberDigitalTwin, agent: Agent) -> Optional[List[str]]:
+    """
+    True perimeter entry points for an external attacker: assets in the agent's start
+    zones that no other asset can reach (e.g. `internet`). Returns None (zone-based
+    start) for insiders or when no such node exists.
+    """
+    if "insider" in agent.id.lower():
+        return None
+    asset_ids = {a.id for a in dt.twin.assets}
+    has_inbound = {e.dst for e in dt.twin.edges if e.src in asset_ids}
+    nodes = sorted(
+        a.id for a in dt.twin.assets
+        if a.zone in agent.start_zones and a.id not in has_inbound
+    )
+    return nodes or None
+
+
+def _resolve_agent(request: Request, agent_id: str, dt: Optional[CyberDigitalTwin] = None) -> Agent:
+    """
+    Resolve or dynamically provision an agent for a simulation run.
+    Ensures that any known/synthesizable agent can traverse the target twin without crashing.
+    """
     agents: Dict[str, Agent] = request.app.state.agent_registry
-    if agent_id not in agents:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Agent '{agent_id}' not found. Available: {list(agents.keys())}",
+
+    is_admin = "admin" in agent_id.lower() or "insider" in agent_id.lower()
+
+    if agent_id in agents:
+        agent = agents[agent_id]
+    else:
+        # Auto-provision dynamically only for adv-admin or twin-specific threat actors
+        can_provision = (
+            is_admin
+            or agent_id.startswith("agent-twin-")
+            or (dt is not None and agent_id == f"agent-{dt.id}")
+            or agent_id == "adv-default"
         )
-    return agents[agent_id]
+        if can_provision:
+            start_zones = _detect_twin_ingress_zones(dt)
+            agent = Agent(
+                id=agent_id,
+                name=f"Threat Actor ({agent_id})",
+                start_zones=start_zones,
+                capabilities=frozenset(["creds:who", "priv:admin"]) if is_admin else frozenset(["creds:who"]),
+                objective="specific_target",
+                noise_budget=1.0,
+                skill=0.8 if is_admin else 0.6,
+            )
+            agents[agent_id] = agent
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Agent '{agent_id}' not found. Available: {list(agents.keys())}",
+            )
+
+    if dt is not None:
+        valid_zones = _detect_twin_ingress_zones(dt)
+        if "insider" not in agent.id.lower():
+            start_zones = valid_zones
+        elif not any(a.zone in agent.start_zones for a in dt.twin.assets):
+            start_zones = valid_zones
+        else:
+            start_zones = agent.start_zones
+
+        caps = set(agent.capabilities)
+        if is_admin:
+            caps.add("creds:who")
+            caps.add("priv:admin")
+            for ident in dt.twin.identities:
+                caps.add(f"creds:{ident.id}")
+
+        return Agent(
+            id=agent.id,
+            name=agent.name,
+            start_zones=start_zones,
+            capabilities=frozenset(caps),
+            objective=agent.objective,
+            noise_budget=agent.noise_budget,
+            skill=agent.skill,
+        )
+
+    return agent
 
 
 def _twin_to_out(dt: CyberDigitalTwin) -> TwinOut:
@@ -136,6 +222,189 @@ def health(request: Request) -> HealthOut:
         golden_twin_id=golden.id if golden else None,
         golden_hash=golden.hash()[:16] if golden else None,
         cache_size=result_cache.size(),
+    )
+
+
+# ─────────────────────────────────────────────
+# GET /twin (default golden twin)
+# ─────────────────────────────────────────────
+
+@router.get("/twin", response_model=TwinOut, tags=["Twin"])
+def get_default_twin(request: Request) -> TwinOut:
+    """Return the default golden digital twin."""
+    golden = request.app.state.golden_twin
+    if not golden:
+        raise HTTPException(status_code=404, detail="Golden twin not loaded.")
+    return _twin_to_out(golden)
+
+
+# ─────────────────────────────────────────────
+# GET /twins (list all registered twins)
+# ─────────────────────────────────────────────
+
+@router.get("/twins", response_model=List[TwinSummaryOut], tags=["Twin"])
+def list_twins(request: Request) -> List[TwinSummaryOut]:
+    """List all registered Digital Twins in the active runtime registry."""
+    registry: Dict[str, CyberDigitalTwin] = request.app.state.twin_registry
+    golden = request.app.state.golden_twin
+    golden_id = golden.id if golden else None
+
+    return [
+        TwinSummaryOut(
+            id=dt.id,
+            parent_id=dt.parent_id,
+            hash=dt.hash()[:16],
+            asset_count=dt.asset_count,
+            edge_count=dt.edge_count,
+            flow_count=dt.flow_count,
+            control_count=dt.control_count,
+            is_golden=(dt.id == golden_id),
+        )
+        for dt in registry.values()
+    ]
+
+
+# ─────────────────────────────────────────────
+# GET /twin/template (annotated schema template)
+# ─────────────────────────────────────────────
+
+@router.get("/twin/template", tags=["Twin"])
+def get_twin_template() -> Dict[str, Any]:
+    """Return an annotated starter template JSON for teachers/evaluators to construct custom twins."""
+    return {
+        "id": "twin-custom-enterprise",
+        "assets": [
+            {
+                "id": "public-web",
+                "name": "Public Ingress Web Gateway",
+                "kind": "server",
+                "zone": "dmz",
+                "criticality": 2,
+                "crown_jewel": False
+            },
+            {
+                "id": "internal-app",
+                "name": "Core Application Service",
+                "kind": "server",
+                "zone": "corp",
+                "criticality": 3,
+                "crown_jewel": False
+            },
+            {
+                "id": "secure-vault-db",
+                "name": "Classified Production Database",
+                "kind": "database",
+                "zone": "prod",
+                "criticality": 5,
+                "crown_jewel": True
+            }
+        ],
+        "identities": [
+            {
+                "id": "id-app-service",
+                "name": "App Service Principal",
+                "kind": "service_account",
+                "tier": 2
+            },
+            {
+                "id": "id-db-admin",
+                "name": "Database Superuser Admin",
+                "kind": "admin",
+                "tier": 1
+            }
+        ],
+        "edges": [
+            {
+                "src": "public-web",
+                "dst": "internal-app",
+                "technique": "exploit_public_app"
+            },
+            {
+                "src": "internal-app",
+                "dst": "secure-vault-db",
+                "technique": "db_login"
+            }
+        ],
+        "flows": [
+            {
+                "id": "FLOW-1",
+                "name": "Customer Transaction Pipeline",
+                "src": "public-web",
+                "dst": "secure-vault-db",
+                "technique": "db_login",
+                "criticality": 5
+            }
+        ],
+        "controls": [
+            {
+                "id": "ctrl-microseg",
+                "name": "Database Subnet Isolation",
+                "cost": 2500,
+                "blocks": ["db_login", "exploit_public_app"],
+                "scope": ["secure-vault-db"],
+                "efficacy": 0.95
+            }
+        ]
+    }
+
+
+# ─────────────────────────────────────────────
+# POST /twin/import (ingest custom twin dataset)
+# ─────────────────────────────────────────────
+
+@router.post("/twin/import", response_model=ImportTwinOut, status_code=201, tags=["Twin"])
+def import_twin(body: Dict[str, Any], request: Request) -> ImportTwinOut:
+    """
+    Import and register a custom Digital Twin from JSON.
+    Validates graph invariants, registers the twin in app.state.twin_registry,
+    and automatically provisions a threat actor agent if none is configured.
+    """
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Request body must be a JSON object representing a digital twin.")
+
+    try:
+        dt = CyberDigitalTwin.from_dict(body)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Digital Twin validation error: {str(exc)}")
+
+    registry: Dict[str, CyberDigitalTwin] = request.app.state.twin_registry
+    registry[dt.id] = dt
+
+    # Ensure an agent is provisioned for simulation
+    agents: Dict[str, Agent] = request.app.state.agent_registry
+    agent_id = f"agent-{dt.id}"
+    if agent_id not in agents:
+        dmz_zones = _detect_twin_ingress_zones(dt)
+        caps = {"creds:who", "priv:admin"}
+        for ident in dt.twin.identities:
+            caps.add(f"creds:{ident.id}")
+        agents[agent_id] = Agent(
+            id=agent_id,
+            name=f"External Threat Actor ({dt.id})",
+            start_zones=dmz_zones,
+            capabilities=frozenset(caps),
+            objective="specific_target",
+            noise_budget=1.0,
+            skill=0.7,
+        )
+
+    return ImportTwinOut(
+        status="ok",
+        twin_id=dt.id,
+        hash=dt.hash(),
+        asset_count=dt.asset_count,
+        identity_count=dt.identity_count,
+        edge_count=dt.edge_count,
+        flow_count=dt.flow_count,
+        control_count=dt.control_count,
+        assets=[
+            AssetOut(
+                id=a.id, name=a.name, kind=a.kind,
+                zone=a.zone, criticality=a.criticality,
+                crown_jewel=a.crown_jewel,
+            )
+            for a in dt.twin.assets
+        ],
     )
 
 
@@ -203,20 +472,38 @@ def run_simulate(body: SimulateRequest, request: Request) -> SimulateOut:
     Search runs ONCE; walk loop runs n trials. Results are cached by
     (twin_hash, agent_id, seed, n) — identical requests return instantly.
     """
-    dt = _get_twin(request, body.twin_id)
-    agent = _resolve_agent(request, body.agent_id)
+    base_dt = _get_twin(request, body.twin_id)
+    # The twin's `controls` list is a catalogue of *proposable* controls, not deployed ones.
+    # Baseline = no controls; only the controls selected in this request are applied.
+    catalogue_ids = [c.id for c in base_dt.twin.controls]
+    unknown = [cid for cid in body.control_ids if cid not in catalogue_ids]
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"Unknown control_ids for twin '{body.twin_id}': {unknown}")
+    dt = base_dt.clone(
+        new_id=base_dt.id,
+        remove_controls=catalogue_ids,
+        control_ids_to_add=body.control_ids,
+    )
+    agent = _resolve_agent(request, body.agent_id, dt=dt)
+    start_nodes = _ingress_nodes(dt, agent)
 
     twin_hash = dt.hash()
     cached = result_cache.get(twin_hash, body.agent_id, body.seed, body.n)
     if cached is not None:
         return _result_to_out(cached, cached=True)
 
+    target = body.target
+    asset_ids = {a.id for a in dt.twin.assets}
+    if target == "prod-db" and "prod-db" not in asset_ids:
+        target = None
+
     result = simulate(
         dt,
         agent,
         n=body.n,
         seed=body.seed,
-        target=body.target,
+        target=target,
+        start_nodes=start_nodes,
     )
     # Phase 5: enrich raw walk result with Wilson CI, p90, route frequencies, weighted risk
     enriched = compute_results(result, twin=dt.twin)
@@ -468,10 +755,18 @@ def post_crawl_audit(body: CrawlAuditRequest, request: Request) -> CrawlAuditRes
     technique exposures, business-flow risks, and recommended cheapest fixes.
     """
     dt = _get_twin(request, body.twin_id)
+    start_node = body.start_node
+    target_node = body.target_node
+    asset_ids = {a.id for a in dt.twin.assets}
+    if start_node == "internet" and "internet" not in asset_ids:
+        start_node = None
+    if target_node == "prod-db" and "prod-db" not in asset_ids:
+        target_node = None
+
     return crawl_audit(
         twin=dt.twin,
-        start_node=body.start_node,
-        target_node=body.target_node,
+        start_node=start_node,
+        target_node=target_node,
         active_control_ids=body.active_control_ids,
         max_paths=body.max_paths,
         max_depth=body.max_depth,

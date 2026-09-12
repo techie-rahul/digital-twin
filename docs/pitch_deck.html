@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinBank Digital Twin — HackX 4.0 Pitch Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              orange: '#FF5500',
+              orangeDark: '#D94800',
+              orangeLight: '#FFF0EB',
+            },
+            ash: {
+              50: '#F9FAFB',
+              100: '#F3F4F6',
+              200: '#E5E7EB',
+              300: '#D1D5DB',
+              400: '#9CA3AF',
+              500: '#6B7280',
+              600: '#4B5563',
+              700: '#374151',
+              800: '#1F2937',
+              900: '#111827',
+              950: '#0B0F17'
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .slide { display: none; opacity: 0; transition: opacity 0.25s ease-in-out; }
+    .slide.active { display: flex; opacity: 1; }
+    .glow-orange { box-shadow: 0 0 35px -5px rgba(255, 85, 0, 0.35); }
+    .glass-panel {
+      background: rgba(17, 24, 39, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  </style>
+</head>
+<body class="bg-[#080C14] text-ash-100 font-sans min-h-screen flex flex-col justify-between select-none overflow-hidden">
+
+  <!-- TOP BAR: Hackathon Branding, Slide Counter, Timer -->
+  <header class="h-14 border-b border-ash-800/80 px-6 flex items-center justify-between z-30 bg-[#080C14]/90 backdrop-blur">
+    <div class="flex items-center gap-3">
+      <div class="w-7 h-7 rounded-lg bg-brand-orange flex items-center justify-center font-bold text-white shadow-md">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div>
+        <span class="font-bold text-sm text-white tracking-tight">FinBank Digital Twin</span>
+        <span class="text-xs text-ash-400 font-mono ml-2 px-2 py-0.5 rounded bg-ash-800 border border-ash-700">MUJ HackX 4.0 • PS #13</span>
+      </div>
+    </div>
+
+    <!-- Timer & Stage Status -->
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2 bg-ash-900 border border-ash-800 px-3 py-1 rounded-full text-xs font-mono">
+        <span id="timerDisplay" class="text-brand-orange font-bold">04:00</span>
+        <button id="timerToggleBtn" class="text-ash-400 hover:text-white transition">▶</button>
+        <button id="timerResetBtn" class="text-ash-400 hover:text-white transition">↺</button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="http://localhost:5173" target="_blank" class="text-xs bg-brand-orange hover:bg-brand-orangeDark text-white font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm">
+          <span>Live Demo</span>
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+        </a>
+        <button id="notesToggleBtn" class="text-xs bg-ash-800 hover:bg-ash-700 border border-ash-700 text-ash-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition">
+          <span>Notes (N)</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN SLIDES CONTAINER -->
+  <main class="flex-1 relative flex items-center justify-center p-6 md:p-10 max-w-7xl mx-auto w-full">
+
+    <!-- SLIDE 1: Title -->
+    <section class="slide active flex-col justify-center items-start w-full h-full max-h-[640px]" data-title="Title & Hook">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-orange/10 border border-brand-orange/30 text-brand-orange text-xs font-mono mb-4">
+        <span>TRACK: CYBERSECURITY & DEFENCE SYSTEMS</span>
+        <span>•</span>
+        <span>PS #13</span>
+      </div>
+      <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight max-w-4xl">
+        Break the Attacker.<br/>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-orange via-orange-400 to-amber-300">Without Breaking the Business.</span>
+      </h1>
+      <p class="text-lg md:text-xl text-ash-300 mt-6 max-w-3xl leading-relaxed">
+        A cyber digital twin that tells a Change Advisory Board (CAB), for any proposed security control, <span class="text-white font-semibold underline decoration-brand-orange underline-offset-4">both what it stops the attacker doing AND what it breaks in production</span> — before you deploy it.
+      </p>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10 w-full max-w-4xl">
+        <div class="p-4 rounded-xl bg-ash-900/60 border border-ash-800">
+          <div class="text-2xl font-bold font-mono text-brand-orange">278 / 278</div>
+          <div class="text-xs text-ash-400 mt-1">Passing Deterministic Tests</div>
+        </div>
+        <div class="p-4 rounded-xl bg-ash-900/60 border border-ash-800">
+          <div class="text-2xl font-bold font-mono text-cyan-400">&lt; 40 ms</div>
+          <div class="text-xs text-ash-400 mt-1">Twin Simulation Latency</div>
+        </div>
+        <div class="p-4 rounded-xl bg-ash-900/60 border border-ash-800">
+          <div class="text-2xl font-bold font-mono text-emerald-400">100% Provenance</div>
+          <div class="text-xs text-ash-400 mt-1">SHA-256 Hash Lineage</div>
+        </div>
+        <div class="p-4 rounded-xl bg-ash-900/60 border border-ash-800">
+          <div class="text-2xl font-bold font-mono text-amber-400">Zero Guesswork</div>
+          <div class="text-xs text-ash-400 mt-1">ServiceFlow Continuity Model</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: The Two Half-Answers -->
+    <section class="slide flex-col justify-center w-full h-full max-h-[640px]" data-title="The Problem: Two Half-Answers">
+      <div class="text-xs font-mono text-brand-orange uppercase tracking-wider mb-2">The Market Reality</div>
+      <h2 class="text-3xl md:text-4xl font-bold text-white tracking-tight">Security Teams Are Forced to Choose Between Two Halves of the Truth</h2>
+      <p class="text-ash-400 text-sm mt-2 mb-6">Attack-path tools tell you a control helps. Cloud analyzers tell you a control breaks something. Neither joins both for the same change.</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 w-full">
+        <!-- Attack Path Tools -->
+        <div class="p-5 rounded-xl bg-ash-900/60 border border-ash-800 flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-mono text-rose-400 uppercase font-semibold">Attack-Path Tools</div>
+            <div class="text-xs text-ash-500 mb-3">BloodHound, XM Cyber, Wiz, Picus</div>
+            <div class="p-3 bg-rose-950/30 border border-rose-900/50 rounded-lg text-xs text-rose-200 mb-4">
+              "Removes 65% of attack paths to Active Directory."
+            </div>
+            <ul class="text-xs text-ash-400 space-y-2">
+              <li class="flex items-start gap-1.5"><span class="text-rose-400">✖</span> Blind to business workflows (payroll, ACH, DB)</li>
+              <li class="flex items-start gap-1.5"><span class="text-rose-400">✖</span> Assumes passive attackers who give up</li>
+              <li class="flex items-start gap-1.5"><span class="text-rose-400">✖</span> Zero operational breakage telemetry</li>
+            </ul>
+          </div>
+          <div class="mt-4 pt-3 border-t border-ash-800 text-[11px] text-ash-500 font-mono">Missing: Operational Impact</div>
+        </div>
+
+        <!-- Cloud Policy Analyzers -->
+        <div class="p-5 rounded-xl bg-ash-900/60 border border-ash-800 flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-mono text-amber-400 uppercase font-semibold">Cloud Policy Analyzers</div>
+            <div class="text-xs text-ash-500 mb-3">Azure VNM Impact, AWS IAM Sim, Report-Only</div>
+            <div class="p-3 bg-amber-950/30 border border-amber-900/50 rounded-lg text-xs text-amber-200 mb-4">
+              "This NSG rule will drop TCP traffic on port 5432."
+            </div>
+            <ul class="text-xs text-ash-400 space-y-2">
+              <li class="flex items-start gap-1.5"><span class="text-amber-400">✖</span> Zero attacker context or threat vector models</li>
+              <li class="flex items-start gap-1.5"><span class="text-amber-400">✖</span> No MITRE ATT&CK technique correlation</li>
+              <li class="flex items-start gap-1.5"><span class="text-amber-400">✖</span> Siloed to one cloud, one control type</li>
+            </ul>
+          </div>
+          <div class="mt-4 pt-3 border-t border-ash-800 text-[11px] text-ash-500 font-mono">Missing: Threat Defense Value</div>
+        </div>
+
+        <!-- FinBank Security Change Sandbox -->
+        <div class="p-5 rounded-xl bg-brand-orange/10 border-2 border-brand-orange/60 flex flex-col justify-between glow-orange">
+          <div>
+            <div class="text-xs font-mono text-brand-orange uppercase font-bold">FinBank Digital Twin</div>
+            <div class="text-xs text-ash-300 mb-3">Security Change Sandbox (PS #13)</div>
+            <div class="p-3 bg-brand-orange/20 border border-brand-orange/40 rounded-lg text-xs text-white font-medium mb-4">
+              "Blocks human route, severs Flow F3 (Payroll Crit 5) &rarr; BLOCK. Recommended alternative: Scoped Seg &rarr; DEPLOY."
+            </div>
+            <ul class="text-xs text-ash-200 space-y-2">
+              <li class="flex items-start gap-1.5"><span class="text-emerald-400 font-bold">✔</span> Evaluates security AND business flow in 1 twin</li>
+              <li class="flex items-start gap-1.5"><span class="text-emerald-400 font-bold">✔</span> Adaptive attacker re-plans dynamically</li>
+              <li class="flex items-start gap-1.5"><span class="text-emerald-400 font-bold">✔</span> Decisive CAB Action: DEPLOY / REVIEW / BLOCK</li>
+            </ul>
+          </div>
+          <div class="mt-4 pt-3 border-t border-brand-orange/30 text-[11px] text-brand-orange font-mono font-semibold">The Unified Solution</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: The ServiceFlow Primitive -->
+    <section class="slide flex-col justify-center w-full h-full max-h-[640px]" data-title="The ServiceFlow Primitive">
+      <div class="text-xs font-mono text-cyan-400 uppercase tracking-wider mb-2">Our Core Modeling Innovation</div>
+      <h2 class="text-3xl md:text-4xl font-bold text-white tracking-tight">The <code class="text-cyan-400 font-mono">ServiceFlow</code>: Elevating Business Operations to First-Class Graph Entities</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 w-full items-center">
+        <div class="space-y-4">
+          <p class="text-ash-300 text-sm leading-relaxed">
+            In standard cybersecurity models, graphs only hold assets, vulnerabilities, and exploit edges. If you block an edge, the security graph looks healthier.
+          </p>
+          <div class="p-4 rounded-xl bg-ash-900/80 border border-ash-800">
+            <div class="text-xs font-mono text-white font-semibold mb-2">Our Modeling Primitive:</div>
+            <p class="text-xs text-ash-400 leading-relaxed">
+              Every legitimate business dependency is registered as an immutable <span class="text-cyan-300 font-mono font-semibold">ServiceFlow</span> with source, destination, protocol/technique, and business criticality (1 to 5).
+            </p>
+          </div>
+          <div class="p-4 rounded-xl bg-rose-950/30 border border-rose-900/60 text-xs">
+            <div class="font-bold text-rose-300 mb-1">🚨 The Hard Business Rule (Inviolable Contract):</div>
+            <p class="text-rose-200">
+              Any proposed security control that severs a ServiceFlow with <span class="font-mono font-bold text-white">Criticality &ge; 4</span> (e.g. Payroll Ledger Commits or SWIFT Settlement) is instantly flagged as <span class="font-bold font-mono text-white bg-rose-600 px-1.5 py-0.5 rounded">BLOCK</span>.
+            </p>
+          </div>
+        </div>
+
+        <div class="p-5 rounded-xl bg-ash-900/90 border border-ash-800 font-mono text-xs space-y-3">
+          <div class="text-ash-400 text-[11px] pb-2 border-b border-ash-800 flex justify-between">
+            <span>FINBANK SERVICE FLOW REGISTRY</span>
+            <span class="text-emerald-400">8 Active Flows</span>
+          </div>
+          <div class="p-2.5 rounded bg-ash-950/60 border border-ash-800/80 flex justify-between items-center">
+            <div>
+              <span class="text-white font-semibold">F3: Payroll Ledger Commits</span>
+              <div class="text-[11px] text-ash-500 font-sans">payroll-api &rarr; prod-db (db_login)</div>
+            </div>
+            <span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[11px]">Crit 5 • P1 Mission</span>
+          </div>
+          <div class="p-2.5 rounded bg-ash-950/60 border border-ash-800/80 flex justify-between items-center">
+            <div>
+              <span class="text-white font-semibold">F7: SWIFT Settlement Clearing</span>
+              <div class="text-[11px] text-ash-500 font-sans">swift-gw &rarr; prod-db (db_login)</div>
+            </div>
+            <span class="px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/40 text-[11px]">Crit 4 • High</span>
+          </div>
+          <div class="p-2.5 rounded bg-ash-950/60 border border-ash-800/80 flex justify-between items-center">
+            <div>
+              <span class="text-white font-semibold">F2: Web Portal API Integration</span>
+              <div class="text-[11px] text-ash-500 font-sans">web-dmz &rarr; payroll-api (rest_api)</div>
+            </div>
+            <span class="px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/40 text-[11px]">Crit 4 • High</span>
+          </div>
+          <div class="p-2.5 rounded bg-ash-950/60 border border-ash-800/80 flex justify-between items-center">
+            <div>
+              <span class="text-white font-semibold">F1: Customer Web Banking Traffic</span>
+              <div class="text-[11px] text-ash-500 font-sans">internet &rarr; web-dmz (https)</div>
+            </div>
+            <span class="px-2 py-0.5 rounded bg-ash-800 text-ash-300 text-[11px]">Crit 3 • Normal</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: Architecture & Two Decoupled Algorithms -->
+    <section class="slide flex-col justify-center w-full h-full max-h-[640px]" data-title="Dual-Engine Architecture">
+      <div class="text-xs font-mono text-brand-orange uppercase tracking-wider mb-2">Technical Rigor</div>
+      <h2 class="text-3xl md:text-4xl font-bold text-white tracking-tight">Decoupled Dual-Engine Architecture & MITRE ATT&CK</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 w-full">
+        <!-- Algorithm A & B -->
+        <div class="space-y-4">
+          <div class="p-4 rounded-xl bg-ash-900/80 border border-ash-800">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-bold text-white">Algorithm A: Stateful DFS Search</span>
+              <span class="text-xs font-mono text-brand-orange">Inventory Engine</span>
+            </div>
+            <p class="text-xs text-ash-300 leading-relaxed">
+              Explores <code class="text-orange-300 font-mono">(node, frozenset(capabilities))</code> state-space. Edges are only traversable once prerequisites (credentials, tokens) are collected. Capped at depth 8, 5,000 states. Runs once per twin state, cached.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-ash-900/80 border border-ash-800">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-bold text-white">Algorithm B: Seeded Monte Carlo Walk</span>
+              <span class="text-xs font-mono text-cyan-400">Adaptive Adversary</span>
+            </div>
+            <p class="text-xs text-ash-300 leading-relaxed">
+              Samples 200–500 stochastic threat actor walks. Agent has local knowledge, not omniscience. When an edge is blocked, adaptation is emergent: agent re-plans via remaining admissible hops. Seeded RNG for 100% stage reproducibility.
+            </p>
+          </div>
+        </div>
+
+        <!-- MITRE YAML -->
+        <div class="p-5 rounded-xl bg-ash-900/90 border border-ash-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between pb-3 border-b border-ash-800">
+              <span class="text-xs font-mono font-semibold text-ash-200">backend/rules/techniques.yaml</span>
+              <span class="text-[11px] font-mono text-emerald-400">10 Real ATT&CK IDs</span>
+            </div>
+            <p class="text-xs text-ash-400 mt-3 mb-3">
+              Techniques live in YAML, never in code. Evaluators can inspect and live-edit costs, noise, and prerequisites on stage.
+            </p>
+            <div class="font-mono text-[11px] space-y-1.5 text-ash-300 bg-ash-950/80 p-3 rounded-lg border border-ash-800/80">
+              <div><span class="text-brand-orange">T1566</span> (phish) &rarr; user foothold</div>
+              <div><span class="text-brand-orange">T1190</span> (exploit_public_app) &rarr; DMZ ingress</div>
+              <div><span class="text-brand-orange">T1003</span> (cred_dump) &rarr; hash harvesting</div>
+              <div><span class="text-brand-orange">T1021.001</span> (rdp_lateral) &rarr; human jump hosts</div>
+              <div><span class="text-brand-orange">T1078</span> (db_login / valid accounts) &rarr; prod-db</div>
+              <div><span class="text-brand-orange">T1041</span> (exfil_c2) &rarr; crown jewel extraction</div>
+            </div>
+          </div>
+          <div class="text-[11px] text-ash-500 font-mono mt-3">Design Rule: Algorithms A and B are never nested.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: The Two Metrics -->
+    <section class="slide flex-col justify-center w-full h-full max-h-[640px]" data-title="Two Metrics: Naive vs Honest">
+      <div class="text-xs font-mono text-amber-400 uppercase tracking-wider mb-2">The Pitch Climax</div>
+      <h2 class="text-3xl md:text-4xl font-bold text-white tracking-tight">Why "Attack Paths Eliminated" Lies</h2>
+      <p class="text-ash-400 text-sm mt-2 mb-6">The brief asks us to rank by paths eliminated. We do — and here is why that number is misleading, and what we deliver instead.</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+        <!-- Naive Metric -->
+        <div class="p-6 rounded-xl bg-ash-900/60 border border-ash-800 flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-mono text-ash-400 uppercase font-bold">Metric 1 (Required by Brief)</div>
+            <div class="text-xl font-bold text-white mt-1">Naive Path Reduction %</div>
+            <div class="text-xs text-ash-400 font-mono mb-4">"Industry Standard Metric"</div>
+            <div class="p-4 bg-ash-950/80 rounded-xl border border-ash-800 text-center mb-4">
+              <div class="text-4xl font-extrabold font-mono text-ash-300">-65.0%</div>
+              <div class="text-xs text-ash-400 mt-1">Attack Paths Neutralized</div>
+            </div>
+            <p class="text-xs text-ash-400 leading-relaxed">
+              Assumes a static, passive attacker who approaches a blocked door and gives up. Gives the board false security confidence while the actual breach likelihood remains critical.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-ash-800 text-[11px] text-rose-400 font-mono">⚠️ Danger: Ignores machine pivots</div>
+        </div>
+
+        <!-- Honest Metric -->
+        <div class="p-6 rounded-xl bg-brand-orange/10 border-2 border-brand-orange/60 flex flex-col justify-between glow-orange">
+          <div>
+            <div class="text-xs font-mono text-brand-orange uppercase font-bold">Metric 2 (Our Honest Metric)</div>
+            <div class="text-xl font-bold text-white mt-1">Adaptive Attacker Cost Increase</div>
+            <div class="text-xs text-brand-orange font-mono mb-4">"Emergent Re-planning"</div>
+            <div class="p-4 bg-brand-orange/20 rounded-xl border border-brand-orange/40 text-center mb-4">
+              <div class="text-4xl font-extrabold font-mono text-brand-orange">+340.0%</div>
+              <div class="text-xs text-white/90 mt-1">Attacker Effort Required (Wilson 95% CI)</div>
+            </div>
+            <p class="text-xs text-ash-200 leading-relaxed">
+              Models how much harder an active attacker has to work when pivoting around the control. Accounts for residual breach probability (&Delta; <span class="font-mono">-70%</span>) and machine-to-machine vectors.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-brand-orange/30 text-[11px] text-emerald-400 font-mono font-semibold">✔ Rigorous: Evaluated via 500 Monte Carlo walks</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: Demo Storyboard (5 Presets) -->
+    <section class="slide flex-col justify-center w-full h-full max-h-[640px]" data-title="4-Minute Demo Storyboard">
+      <div class="text-xs font-mono text-brand-orange uppercase tracking-wider mb-2">Stage Demonstration</div>
+      <h2 class="text-3xl md:text-4xl font-bold text-white tracking-tight">The 4-Minute Demo: 5 Keyboard-Driven Presets (Keys 1–5)</h2>
+      <p class="text-ash-400 text-sm mt-2 mb-4">A complete change board narrative executed seamlessly on stage with hotkeys.</p>
+
+      <div class="overflow-hidden rounded-xl border border-ash-800 bg-ash-900/60 text-xs">
+        <table class="w-full text-left">
+          <thead class="bg-ash-950/80 font-mono text-ash-400 border-b border-ash-800">
+            <tr>
+              <th class="p-3">Key</th>
+              <th class="p-3">Preset Scenario</th>
+              <th class="p-3">Security Impact</th>
+              <th class="p-3">Business Impact</th>
+              <th class="p-3">Verdict</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-ash-800/60 font-sans">
+            <tr class="hover:bg-ash-800/30">
+              <td class="p-3 font-mono font-bold text-ash-300">1</td>
+              <td class="p-3 font-semibold text-white">Baseline Estate</td>
+              <td class="p-3 text-ash-300">4 critical paths, 82% risk</td>
+              <td class="p-3 text-emerald-400">All flows operational</td>
+              <td class="p-3"><span class="px-2 py-0.5 rounded bg-ash-800 text-ash-300 font-mono text-[11px]">STANDBY</span></td>
+            </tr>
+            <tr class="hover:bg-ash-800/30 bg-rose-950/10">
+              <td class="p-3 font-mono font-bold text-rose-400">2</td>
+              <td class="p-3 font-semibold text-rose-200">Full DB Segmentation</td>
+              <td class="p-3 text-ash-300">0/4 paths remain (100% cut)</td>
+              <td class="p-3 text-rose-400 font-semibold">SEVERS Flow F3 Payroll (P1 Outage!)</td>
+              <td class="p-3"><span class="px-2 py-0.5 rounded bg-rose-600 text-white font-mono font-bold text-[11px]">BLOCK</span></td>
+            </tr>
+            <tr class="hover:bg-ash-800/30 bg-amber-950/10">
+              <td class="p-3 font-mono font-bold text-amber-400">3</td>
+              <td class="p-3 font-semibold text-amber-200">MFA for Humans</td>
+              <td class="p-3 text-ash-300">-65% paths; Attacker pivots via Route D</td>
+              <td class="p-3 text-emerald-400">Zero flows severed</td>
+              <td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono font-bold text-[11px]">REVIEW</span></td>
+            </tr>
+            <tr class="hover:bg-ash-800/30 bg-emerald-950/10">
+              <td class="p-3 font-mono font-bold text-emerald-400">4</td>
+              <td class="p-3 font-semibold text-emerald-200">Scoped Seg + Human MFA</td>
+              <td class="p-3 text-ash-300">Route D blocked, +340% effort</td>
+              <td class="p-3 text-emerald-400">Zero flows severed (Safe)</td>
+              <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-600 text-white font-mono font-bold text-[11px]">DEPLOY</span></td>
+            </tr>
+            <tr class="hover:bg-ash-800/30">
+              <td class="p-3 font-mono font-bold text-brand-orange">5</td>
+              <td class="p-3 font-semibold text-ash-200">Sync Drift (Contractor Admin)</td>
+              <td class="p-3 text-ash-300">Risk spikes 12% &rarr; 68% via ws-contractor</td>
+              <td class="p-3 text-amber-400">Privilege boundary drift detected</td>
+              <td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono font-bold text-[11px]">REVIEW</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: Preset 2 BLOCK Screen -->
+    <section class="slide flex-col justify-center w-full h-full max-h-[640px]" data-title="Preset 2: The P1 Outage Moment">
+      <div class="text-xs font-mono text-rose-400 uppercase tracking-wider mb-2">Live Demonstration • Key 2</div>
+      <h2 class="text-2xl md:text-3xl font-bold text-white tracking-tight">The Moment of Truth: A Control That Cuts Paths but Kills Payroll</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mt-4 items-center">
+        <div class="md:col-span-7 rounded-xl overflow-hidden border border-ash-800 shadow-2xl">
+          <img src="presentation_assets/02_block_p1_outage.png" alt="Preset 2 Block P1 Outage" class="w-full h-auto object-cover" />
+        </div>
+        <div class="md:col-span-5 space-y-3 text-xs">
+          <div class="p-3 rounded-lg bg-rose-950/40 border border-rose-900/60">
+            <span class="font-mono text-rose-300 font-bold block mb-1">VERDICT: BLOCK (P1 OUTAGE)</span>
+            <p class="text-rose-200 leading-relaxed">
+              Every edge into the database is locked down. An attack-path tool counts this as 100% path reduction.
+            </p>
+          </div>
+          <div class="p-3 rounded-lg bg-ash-900/80 border border-ash-800">
+            <span class="font-mono text-ash-200 font-semibold block mb-1">Severed Operational Flow:</span>
+            <p class="text-ash-400">
+              <span class="text-rose-400 font-mono font-bold">F3: Payroll Transaction Ledger Commits</span><br/>
+              payroll-api &rarr; prod-db (Criticality 5/5). Deploying this rule immediately breaks bank payroll.
+            </p>
+          </div>
+          <div class="p-3 rounded-lg bg-emerald-950/30 border border-emerald-900/60">
+            <span class="font-mono text-emerald-300 font-semibold block mb-1">Automated Alternative Provided:</span>
+            <p class="text-emerald-200">
+              "Scoped Segmentation + Human MFA" preserves all service flows while blocking lateral attack vectors. One-click <span class="bg-emerald-600 px-1.5 py-0.5 rounded text-white font-semibold">Apply &rarr;</span>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 8: Preset 3 Re-Planning Screen -->
+    <section class="slide flex-col justify-center w-full h-full max-h-[640px]" data-title="Preset 3: Adversary Re-Planning">
+      <div class="text-xs font-mono text-amber-400 uppercase tracking-wider mb-2">Live Demonstration • Key 3</div>
+      <h2 class="text-2xl md:text-3xl font-bold text-white tracking-tight">Emergent Adversary Adaptation: The CI/CD "Route D" Bypass</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mt-4 items-center">
+        <div class="md:col-span-7 rounded-xl overflow-hidden border border-ash-800 shadow-2xl">
+          <img src="presentation_assets/03_mfa_review_route_d.png" alt="Preset 3 MFA Review Route D" class="w-full h-auto object-cover" />
+        </div>
+        <div class="md:col-span-5 space-y-3 text-xs">
+          <div class="p-3 rounded-lg bg-amber-950/40 border border-amber-900/60">
+            <span class="font-mono text-amber-300 font-bold block mb-1">VERDICT: REVIEW (ADAPTIVE PIVOT)</span>
+            <p class="text-amber-200 leading-relaxed">
+              MFA blocks human lateral movement via Developer Workstation (<code class="text-white">ws-dev</code>) and Admin Bastion (<code class="text-white">jump-01</code>).
+            </p>
+          </div>
+          <div class="p-3 rounded-lg bg-ash-900/80 border border-ash-800">
+            <span class="font-mono text-purple-300 font-semibold block mb-1">Emergent Route D Bypass:</span>
+            <p class="text-ash-400">
+              The attacker dynamically discovers non-interactive machine tokens on the automated build runner:
+              <span class="font-mono text-purple-300 block mt-1">web-dmz &rarr; ci-runner &rarr; backup-01 &rarr; prod-db</span>
+            </p>
+          </div>
+          <div class="p-3 rounded-lg bg-ash-900/80 border border-ash-800">
+            <span class="font-mono text-ash-300 font-semibold block mb-1">The Lesson for the Board:</span>
+            <p class="text-ash-400">
+              Zero flows are broken, but the crown jewel is still reached. Never deploy controls without evaluating machine-identity pivot paths.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 9: Chess Piece Security Auditor -->
+    <section class="slide flex-col justify-center w-full h-full max-h-[640px]" data-title="Chess Piece Security Auditor">
+      <div class="text-xs font-mono text-brand-orange uppercase tracking-wider mb-2">PS #13 Prioritization Engine</div>
+      <h2 class="text-2xl md:text-3xl font-bold text-white tracking-tight">Chess Piece Security Auditor & Chokepoint Cut-Sets</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mt-4 items-center">
+        <div class="md:col-span-7 rounded-xl overflow-hidden border border-ash-800 shadow-2xl">
+          <img src="presentation_assets/06_chess_auditor.png" alt="Chess Piece Auditor" class="w-full h-auto object-cover" />
+        </div>
+        <div class="md:col-span-5 space-y-3 text-xs">
+          <div class="p-3 rounded-lg bg-ash-900/80 border border-ash-800">
+            <span class="font-mono text-brand-orange font-semibold block mb-1">Hop-by-Hop Adversary Position:</span>
+            <p class="text-ash-300">
+              Evaluates current threat actor position, exposure score (2.0 to 10.0), and legal candidate moves with hops-to-crown-jewel distances.
+            </p>
+          </div>
+          <div class="p-3 rounded-lg bg-cyan-950/30 border border-cyan-900/60">
+            <span class="font-mono text-cyan-300 font-semibold block mb-1">Prioritized Chokepoint Cut-Set:</span>
+            <p class="text-cyan-200">
+              Computes the mathematical minimum cut-set of edges needed to sever all critical paths to the crown jewel, ranked by cost efficacy ($1,500 on bastion vs $2,500 on database).
+            </p>
+          </div>
+          <div class="p-3 rounded-lg bg-ash-900/80 border border-ash-800">
+            <span class="font-mono text-ash-300 font-semibold block mb-1">Weakest Link Detection:</span>
+            <p class="text-ash-400">
+              Automatically flags <code class="text-brand-orange font-mono">prod-db</code> as the single asset with highest converging risk density.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 10: Constrained Portfolio Optimizer -->
+    <section class="slide flex-col justify-center w-full h-full max-h-[640px]" data-title="Constrained Portfolio Optimizer">
+      <div class="text-xs font-mono text-cyan-400 uppercase tracking-wider mb-2">Mathematical Decision Support</div>
+      <h2 class="text-3xl md:text-4xl font-bold text-white tracking-tight">Constrained Portfolio Optimizer: Security Under Budget & Zero Outages</h2>
+      <p class="text-ash-400 text-sm mt-2 mb-6">Maximizing attack path elimination subject to budget AND inviolable business continuity.</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full items-center">
+        <div class="p-5 rounded-xl bg-ash-900/80 border border-ash-800 space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-ash-800">
+            <span class="text-xs font-mono text-white font-semibold">FORMAL KNAPSACK FORMULATION</span>
+            <span class="text-xs font-mono text-brand-orange">POST /optimize</span>
+          </div>
+          <div class="bg-ash-950/80 p-3 rounded-lg border border-ash-800 font-mono text-xs text-ash-300 leading-relaxed">
+            Maximize: &sum; &Delta; Risk(c_i)<br/>
+            Subject to: &sum; Cost(c_i) &le; Budget ($5,000)<br/>
+            AND: Max Severed Flow Criticality &lt; Threshold (&le; 3)
+          </div>
+          <p class="text-xs text-ash-400 leading-relaxed">
+            A naive optimizer chooses controls that eliminate the most paths regardless of damage. Our optimizer eliminates dangerous combinations before presenting the portfolio to leadership.
+          </p>
+        </div>
+
+        <div class="p-5 rounded-xl bg-ash-900/80 border border-ash-800 space-y-4">
+          <div class="text-xs font-mono text-emerald-400 font-semibold">OUTPUT AT $5,000 BUDGET CEILING</div>
+          <div class="p-3 bg-emerald-950/30 border border-emerald-900/60 rounded-lg text-xs space-y-1">
+            <div class="font-bold text-emerald-300">Recommended Safe Portfolio:</div>
+            <div class="text-white font-mono">• Scoped Segmentation ($2,500)</div>
+            <div class="text-white font-mono">• Privileged Access MFA ($1,500)</div>
+            <div class="text-emerald-400 font-semibold mt-2">&rarr; Total Cost: $4,000 | Path Reduction: ~83%</div>
+            <div class="text-ash-400 text-[11px] mt-1">Zero flows above criticality 3 severed.</div>
+          </div>
+          <div class="p-3 bg-rose-950/20 border border-rose-900/40 rounded-lg text-xs">
+            <div class="text-rose-300 font-semibold">Contrasted with Unconstrained Naive:</div>
+            <div class="text-rose-400/90 text-[11px] mt-0.5">Would deploy Full DB Seg &rarr; immediate P1 payroll outage.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 11: Continuous Sync & Lineage -->
+    <section class="slide flex-col justify-center w-full h-full max-h-[640px]" data-title="Continuous Sync & Lineage">
+      <div class="text-xs font-mono text-emerald-400 uppercase tracking-wider mb-2">Living Digital Twins</div>
+      <h2 class="text-2xl md:text-3xl font-bold text-white tracking-tight">Continuous Synchronization & Cryptographic Lineage</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mt-4 items-center">
+        <div class="md:col-span-7 rounded-xl overflow-hidden border border-ash-800 shadow-2xl">
+          <img src="presentation_assets/07_lineage_sha256.png" alt="Lineage SHA256" class="w-full h-auto object-cover" />
+        </div>
+        <div class="md:col-span-5 space-y-3 text-xs">
+          <div class="p-3 rounded-lg bg-ash-900/80 border border-ash-800">
+            <span class="font-mono text-emerald-400 font-semibold block mb-1">SHA-256 Content-Addressed Lineage:</span>
+            <p class="text-ash-300">
+              Every digital twin state and what-if mutation is hashed. Provides non-repudiation and an immutable audit trail for governance compliance.
+            </p>
+          </div>
+          <div class="p-3 rounded-lg bg-amber-950/30 border border-amber-900/60">
+            <span class="font-mono text-amber-300 font-semibold block mb-1">Preset 5: Sync Drift Detection:</span>
+            <p class="text-amber-200">
+              Simulates production drift: a contractor workstation (<code class="text-white">ws-contractor</code>) is granted an admin role. The twin detects the regression instantly: risk spikes from 12% to 68%.
+            </p>
+          </div>
+          <div class="p-3 rounded-lg bg-ash-900/80 border border-ash-800">
+            <span class="font-mono text-ash-300 font-semibold block mb-1">7 Bundled Multi-Sector Twins:</span>
+            <p class="text-ash-400">
+              Supports Banking, Healthcare (Epic EHR + Infusion Pumps), AWS Cloud SaaS, and DoE Critical Power Grids, plus live JSON upload.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 12: Engineering Discipline -->
+    <section class="slide flex-col justify-center w-full h-full max-h-[640px]" data-title="Engineering Discipline">
+      <div class="text-xs font-mono text-brand-orange uppercase tracking-wider mb-2">Systems Engineering</div>
+      <h2 class="text-3xl md:text-4xl font-bold text-white tracking-tight">Engineering Discipline Worth Celebrating</h2>
+      <p class="text-ash-400 text-sm mt-2 mb-6">Built like mission-critical financial software, not a throwaway hackathon prototype.</p>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+        <div class="p-4 rounded-xl bg-ash-900/70 border border-ash-800 space-y-2">
+          <div class="text-brand-orange font-mono font-bold text-2xl">278 Passing</div>
+          <div class="text-xs font-semibold text-white">Automated Tests</div>
+          <p class="text-[11px] text-ash-400 leading-relaxed">
+            Runs in 2.82s. Tests written before the pathfinder existed to prevent silent algorithmic drift.
+          </p>
+        </div>
+
+        <div class="p-4 rounded-xl bg-ash-900/70 border border-ash-800 space-y-2">
+          <div class="text-cyan-400 font-mono font-bold text-2xl">Frozen Pydantic</div>
+          <div class="text-xs font-semibold text-white">Immutable Models</div>
+          <p class="text-[11px] text-ash-400 leading-relaxed">
+            All collections are tuples & frozensets. 100% hashable for LRU content-addressed cache keys.
+          </p>
+        </div>
+
+        <div class="p-4 rounded-xl bg-ash-900/70 border border-ash-800 space-y-2">
+          <div class="text-emerald-400 font-mono font-bold text-2xl">Deterministic</div>
+          <div class="text-xs font-semibold text-white">Seeded Monte Carlo</div>
+          <p class="text-[11px] text-ash-400 leading-relaxed">
+            Seed is part of the cache key. Rehearsed numbers match stage numbers identically every single time.
+          </p>
+        </div>
+
+        <div class="p-4 rounded-xl bg-ash-900/70 border border-ash-800 space-y-2">
+          <div class="text-amber-400 font-mono font-bold text-2xl">Zero LLMs</div>
+          <div class="text-xs font-semibold text-white">In Security Loop</div>
+          <p class="text-[11px] text-ash-400 leading-relaxed">
+            Zero stochastic hallucinations in security decisions. Deterministic graph mathematics only.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 13: Honest Positioning -->
+    <section class="slide flex-col justify-center w-full h-full max-h-[640px]" data-title="Honest Positioning">
+      <div class="text-xs font-mono text-ash-400 uppercase tracking-wider mb-2">Defensible Novelty</div>
+      <h2 class="text-3xl md:text-4xl font-bold text-white tracking-tight">Honest Positioning & Academic Integrity</h2>
+      
+      <div class="p-5 rounded-xl bg-ash-900/90 border border-brand-orange/40 mt-6 w-full">
+        <div class="text-xs font-mono text-brand-orange font-bold uppercase mb-2">Approved Positioning Claim (Verbatim)</div>
+        <blockquote class="text-sm md:text-base text-ash-200 italic leading-relaxed border-l-2 border-brand-orange pl-4 py-1">
+          "Adaptive attacker modelling exists in research — MAL Simulator, the CAGE challenges. Control impact simulation exists in cloud platforms — Azure's rule impact analyzer. To our knowledge no product joins security benefit and business breakage on one model for a single proposed change, which is the decision a change board actually makes."
+        </blockquote>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 w-full text-xs">
+        <div class="p-4 rounded-xl bg-ash-900/60 border border-ash-800">
+          <span class="text-rose-400 font-mono font-bold block mb-1">❌ Claims We Defensibly Avoid</span>
+          <ul class="text-ash-400 space-y-1">
+            <li>• "Nobody models attacker adaptation" (MAL & CAGE do)</li>
+            <li>• "First to simulate network impact" (Azure does)</li>
+            <li>• "We invented attack paths or blast radius" (Commodity)</li>
+          </ul>
+        </div>
+
+        <div class="p-4 rounded-xl bg-ash-900/60 border border-ash-800">
+          <span class="text-emerald-400 font-mono font-bold block mb-1">✔ What We Actually Pioneered</span>
+          <ul class="text-ash-200 space-y-1">
+            <li>• First dual-graph model uniting MITRE ATT&CK + ServiceFlows</li>
+            <li>• Automated Change Advisory Board (CAB) verdict engine</li>
+            <li>• Constrained business continuity portfolio optimization</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 14: Conclusion & Q&A -->
+    <section class="slide flex-col justify-center items-center text-center w-full h-full max-h-[640px]" data-title="Conclusion & Q&A">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono mb-4">
+        <span>MISSION ACCOMPLISHED</span>
+        <span>•</span>
+        <span>PS #13 DELIVERED</span>
+      </div>
+      <h2 class="text-4xl md:text-5xl font-extrabold text-white tracking-tight">
+        Deploy with Confidence.<br/>
+        <span class="text-brand-orange">Block with Mathematical Proof.</span>
+      </h2>
+      <p class="text-ash-300 text-base max-w-2xl mt-4 leading-relaxed">
+        FinBank Digital Twin transforms security procurement from an internal debate into an objective, data-driven Change Board decision.
+      </p>
+
+      <div class="flex items-center gap-4 mt-8">
+        <a href="http://localhost:5173" target="_blank" class="px-6 py-3 rounded-xl bg-brand-orange hover:bg-brand-orangeDark text-white font-bold text-sm transition shadow-lg glow-orange flex items-center gap-2">
+          <span>Open Live Sandbox</span>
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <button id="qaDrawerBtn" class="px-6 py-3 rounded-xl bg-ash-800 hover:bg-ash-700 border border-ash-700 text-white font-semibold text-sm transition">
+          Judge Q&A Objection Playbook
+        </button>
+      </div>
+
+      <div class="text-xs text-ash-500 font-mono mt-10">
+        MUJ HackX 4.0 • Team of Four • FinBank Digital Twin
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BOTTOM BAR: Navigation Controls & Progress -->
+  <footer class="h-16 border-t border-ash-800/80 px-6 flex items-center justify-between z-30 bg-[#080C14]/90 backdrop-blur">
+    <div class="flex items-center gap-2 text-xs font-mono text-ash-400">
+      <span id="slideIndicator" class="font-bold text-white">01 / 14</span>
+      <span>—</span>
+      <span id="slideTitle" class="text-ash-300 truncate max-w-xs">Title & Hook</span>
+    </div>
+
+    <!-- Slide progress line -->
+    <div class="flex-1 max-w-md mx-6 h-1 bg-ash-800 rounded-full overflow-hidden">
+      <div id="progressBar" class="h-full bg-brand-orange transition-all duration-300 w-[7.14%]"></div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button id="prevBtn" class="px-3 py-1.5 rounded-lg bg-ash-900 hover:bg-ash-800 border border-ash-700 text-xs font-mono transition text-ash-200">
+        &larr; Prev (Left)
+      </button>
+      <button id="nextBtn" class="px-3 py-1.5 rounded-lg bg-brand-orange hover:bg-brand-orangeDark text-white text-xs font-mono transition font-semibold">
+        Next (Right) &rarr;
+      </button>
+      <button id="fullscreenBtn" class="p-1.5 rounded-lg bg-ash-900 hover:bg-ash-800 border border-ash-700 text-ash-300 transition" title="Toggle Fullscreen (F)">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </button>
+    </div>
+  </footer>
+
+  <!-- SPEAKER NOTES DRAWER (Toggle with N) -->
+  <aside id="notesDrawer" class="fixed right-0 top-14 bottom-16 w-96 glass-panel border-l border-ash-800 p-6 z-40 transform translate-x-full transition-transform duration-300 flex flex-col justify-between overflow-y-auto">
+    <div>
+      <div class="flex items-center justify-between pb-3 border-b border-ash-800 mb-4">
+        <span class="text-xs font-mono font-bold text-brand-orange">SPEAKER SCRIPT & STAGE CUES</span>
+        <span id="notesTimeBudget" class="text-[11px] font-mono text-ash-400">0:00 - 0:25</span>
+      </div>
+      <div id="notesContent" class="text-xs text-ash-200 leading-relaxed space-y-3 font-sans">
+        <!-- Injected via JS -->
+      </div>
+    </div>
+    <div class="pt-4 border-t border-ash-800 text-[11px] font-mono text-ash-400">
+      Press <kbd class="px-1.5 py-0.5 rounded bg-ash-800 text-ash-200">N</kbd> to hide notes drawer
+    </div>
+  </aside>
+
+  <!-- JUDGE Q&A MODAL -->
+  <div id="qaModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-6">
+    <div class="glass-panel max-w-2xl w-full rounded-2xl border border-ash-700 p-6 max-h-[85vh] overflow-y-auto space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-ash-800">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <span class="text-brand-orange">🎯</span> Judge Objection Playbook
+        </h3>
+        <button id="closeQaBtn" class="text-ash-400 hover:text-white">&times;</button>
+      </div>
+      
+      <div class="space-y-4 text-xs">
+        <div class="p-3 bg-ash-900/80 rounded-xl border border-ash-800">
+          <div class="font-bold text-brand-orange mb-1">Q: "Where do you get ServiceFlow data in real life?"</div>
+          <p class="text-ash-300">
+            A: Existing CMDBs (ServiceNow), network application dependency maps (AWS Discovery, Dynatrace/Datadog), and Kubernetes service manifests. Our JSON schema is lightweight for instant ingestion.
+          </p>
+        </div>
+        <div class="p-3 bg-ash-900/80 rounded-xl border border-ash-800">
+          <div class="font-bold text-brand-orange mb-1">Q: "Why not use an LLM or RL agent for the adversary?"</div>
+          <p class="text-ash-300">
+            A: Change boards require mathematical determinism. If an LLM gives different answers at 9 AM and 10 AM, the CAB cannot legally approve it. Our seeded Monte Carlo engine is deterministic and reproducible down to the seed.
+          </p>
+        </div>
+        <div class="p-3 bg-ash-900/80 rounded-xl border border-ash-800">
+          <div class="font-bold text-brand-orange mb-1">Q: "Isn't finding all paths too slow on massive graphs?"</div>
+          <p class="text-ash-300">
+            A: That is why Algorithm A (bounded stateful DFS) and Algorithm B (Monte Carlo walks) are decoupled. Algorithm A runs once with depth 8 / 5,000 states caps. Simulation latency is under 40 milliseconds even on hospital and energy grid twins.
+          </p>
+        </div>
+        <div class="p-3 bg-ash-900/80 rounded-xl border border-ash-800">
+          <div class="font-bold text-brand-orange mb-1">Q: "Why call 65% path reduction misleading?"</div>
+          <p class="text-ash-300">
+            A: Path reduction assumes an attacker hits a closed door and gives up. In reality, attackers adapt. We prove that when jump hosts get MFA, the attacker pivots via Route D (CI/CD machine token) and still breaches the database.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const speakerNotes = [
+      {
+        time: "0:00 - 0:25",
+        script: "Every Tuesday morning, Change Advisory Boards in banks and critical infrastructure sit in a room and make multi-million dollar decisions on pure gut feel. The CISO wants to deploy zero-trust network segmentation. But Infrastructure votes NO because nobody can prove it won't take down payroll. Today, we built the Security Change Sandbox to answer both questions before you deploy."
+      },
+      {
+        time: "0:25 - 0:55",
+        script: "Why does this problem exist? Because the market offers two half-answers. Attack-path tools like BloodHound or Wiz tell you what paths you eliminate, but they are totally blind to business operations. Cloud policy analyzers tell you what packets drop, but have zero threat actor models. The CAB needs one answer: Can I deploy this safely, within budget, and how confident are we?"
+      },
+      {
+        time: "0:55 - 1:20",
+        script: "The secret to solving this is our core modeling primitive: the ServiceFlow. Every legitimate business dependency is registered with protocol, endpoints, and criticality from 1 to 5. If a proposed security control breaks Flow F3—our payroll ledger with Criticality 5—our engine instantly issues a hard BLOCK verdict, regardless of how good the security score looks."
+      },
+      {
+        time: "1:20 - 1:50",
+        script: "Under the hood, we never guess. Algorithm A is a stateful depth-first search that discovers the full path inventory. Algorithm B is our Monte Carlo agent walk simulator—the attacker is not omniscient; they adapt based on local vision. And every technique is grounded in real MITRE ATT&CK techniques defined in decoupled YAML, not code."
+      },
+      {
+        time: "1:50 - 2:20",
+        script: "Problem Statement #13 asks us to rank by paths eliminated. We do that. But on stage, we will prove why that industry-standard metric is dangerously misleading. Naive tools tell you 65% paths eliminated when you put MFA on human bastions. But our engine shows the attacker re-planning down Route D via CI/CD machine tokens. That's why we ship BOTH metrics."
+      },
+      {
+        time: "2:20 - 2:45",
+        script: "Let's switch to the live system. We built a keyboard-driven judge experience with five presets that tell a complete decision story in under four minutes. Preset 1 is baseline. Preset 2 simulates full database segmentation. Preset 3 tests MFA. Preset 4 is the safe alternative. Preset 5 demonstrates continuous sync drift."
+      },
+      {
+        time: "2:45 - 3:10",
+        script: "Look at Preset 2 on screen. An attack-path tool calls this an 80% path reduction win. But look at our Business Impact tile: BLOCKS Payroll API to Core Database. Flow F3 is severed. That's an immediate P1 Outage. Our engine flags BLOCK and suggests an automated safe alternative."
+      },
+      {
+        time: "3:10 - 3:35",
+        script: "Next, we test MFA for Humans. The business is safe—zero broken flows. But the verdict is REVIEW, not Deploy. Why? Look at the graph: the adversary pivots around the bastion down Route D—the automated CI/CD pipeline. The crown jewel still falls. We show the exact residual route on the graph."
+      },
+      {
+        time: "3:35 - 4:00",
+        script: "PS #13 asks how we prioritize remediation. Scanners give you 500 CVEs sorted by CVSS. That's useless. We built the Chess Piece Security Auditor. It treats the network like a grandmaster chessboard, evaluating legal moves, distance to crown jewels, and calculates the prioritized chokepoint cut-set required to intercept the attacker."
+      },
+      {
+        time: "4:00 - 4:20",
+        script: "If you have a fixed budget of $5,000, our Portfolio Optimizer runs a constrained knapsack optimization. Instead of naively picking controls that break payroll, it enforces zero disruption to flows above your criticality ceiling. At $5,000, it selects Scoped Seg and MFA—83% path reduction with zero outage."
+      },
+      {
+        time: "4:20 - 4:40",
+        script: "In production, infrastructure drifts. In FinBank Digital Twin, every state mutation is content-addressed with SHA-256 hashes. When a change board approves a change, the what-if twin is cryptographically committed with immutable provenance. And we bundle banking, healthcare, cloud SaaS, and power grid twins."
+      },
+      {
+        time: "4:40 - 5:00",
+        script: "We have 278 unit and integration tests passing in under 3 seconds. All twin models are frozen Pydantic v2 records with content-hashed caching. There are zero LLM hallucinations in our decision engine—it's deterministic, mathematical graph algorithms."
+      },
+      {
+        time: "5:00 - 5:20",
+        script: "We did not invent attack graphs or blast radius. MAL and CAGE already model adaptive attackers. Azure simulates network ACLs. Our defensible novelty is unifying them—joining security benefit and business breakage on the same model for a single proposed change."
+      },
+      {
+        time: "5:20 - 5:45",
+        script: "In summary, the Security Change Sandbox transforms security deployment from an argument into an objective, data-driven Change Board decision. You can deploy with confidence, block with proof, and protect crown jewels without breaking payroll. Thank you!"
+      }
+    ];
+
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+
+    const slideIndicator = document.getElementById('slideIndicator');
+    const slideTitle = document.getElementById('slideTitle');
+    const progressBar = document.getElementById('progressBar');
+    const notesContent = document.getElementById('notesContent');
+    const notesTimeBudget = document.getElementById('notesTimeBudget');
+    const notesDrawer = document.getElementById('notesDrawer');
+    const notesToggleBtn = document.getElementById('notesToggleBtn');
+    const qaModal = document.getElementById('qaModal');
+    const qaDrawerBtn = document.getElementById('qaDrawerBtn');
+    const closeQaBtn = document.getElementById('closeQaBtn');
+
+    function updateSlide(idx) {
+      if (idx < 0 || idx >= totalSlides) return;
+      slides[currentSlide].classList.remove('active');
+      currentSlide = idx;
+      slides[currentSlide].classList.add('active');
+
+      const numStr = String(currentSlide + 1).padStart(2, '0');
+      const totalStr = String(totalSlides).padStart(2, '0');
+      slideIndicator.textContent = `${numStr} / ${totalStr}`;
+      slideTitle.textContent = slides[currentSlide].dataset.title || '';
+      progressBar.style.width = `${((currentSlide + 1) / totalSlides) * 100}%`;
+
+      // Update speaker notes
+      if (speakerNotes[currentSlide]) {
+        notesTimeBudget.textContent = speakerNotes[currentSlide].time;
+        notesContent.innerHTML = `<p>${speakerNotes[currentSlide].script}</p>`;
+      }
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', () => updateSlide(currentSlide - 1));
+    document.getElementById('nextBtn').addEventListener('click', () => updateSlide(currentSlide + 1));
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        updateSlide(currentSlide + 1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'Backspace' || e.key === 'PageUp') {
+        e.preventDefault();
+        updateSlide(currentSlide - 1);
+      } else if (e.key === 'n' || e.key === 'N') {
+        toggleNotes();
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      }
+    });
+
+    function toggleNotes() {
+      notesDrawer.classList.toggle('translate-x-full');
+    }
+    notesToggleBtn.addEventListener('click', toggleNotes);
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+    document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+
+    // Q&A Modal
+    if (qaDrawerBtn) qaDrawerBtn.addEventListener('click', () => qaModal.classList.remove('hidden'));
+    if (closeQaBtn) closeQaBtn.addEventListener('click', () => qaModal.classList.add('hidden'));
+    qaModal.addEventListener('click', (e) => { if (e.target === qaModal) qaModal.classList.add('hidden'); });
+
+    // Stage Rehearsal Timer (4 minutes)
+    let timeLeft = 240;
+    let timerInterval = null;
+    const timerDisplay = document.getElementById('timerDisplay');
+    const timerToggleBtn = document.getElementById('timerToggleBtn');
+    const timerResetBtn = document.getElementById('timerResetBtn');
+
+    function renderTimer() {
+      const m = Math.floor(timeLeft / 60);
+      const s = timeLeft % 60;
+      timerDisplay.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      if (timeLeft <= 30) {
+        timerDisplay.classList.add('text-rose-500');
+        timerDisplay.classList.remove('text-brand-orange');
+      } else {
+        timerDisplay.classList.remove('text-rose-500');
+        timerDisplay.classList.add('text-brand-orange');
+      }
+    }
+
+    timerToggleBtn.addEventListener('click', () => {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        timerToggleBtn.textContent = '▶';
+      } else {
+        timerToggleBtn.textContent = '⏸';
+        timerInterval = setInterval(() => {
+          if (timeLeft > 0) {
+            timeLeft--;
+            renderTimer();
+          } else {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            timerToggleBtn.textContent = '▶';
+          }
+        }, 1000);
+      }
+    });
+
+    timerResetBtn.addEventListener('click', () => {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
+      timerToggleBtn.textContent = '▶';
+      timeLeft = 240;
+      renderTimer();
+    });
+
+    // Initialize slide 0
+    updateSlide(0);
+  </script>
+</body>
+</html>

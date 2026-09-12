@@ -66,13 +66,16 @@ class Vulnerability(BaseModel, frozen=True):
 
 
 class RecommendedFix(BaseModel, frozen=True):
-    """The cheapest / best-value control to deploy at a node."""
+    """The best-value chokepoint control to deploy at a node."""
 
     control_id: str
     control_name: str
     cost: int
     vulnerabilities_fixed: int
     description: str
+    paths_eliminated: int = 0
+    is_safe: bool = True
+    broken_flows: tuple[str, ...] = ()
 
 
 class OutgoingEdgeInfo(BaseModel, frozen=True):
@@ -84,6 +87,10 @@ class OutgoingEdgeInfo(BaseModel, frozen=True):
     mitre_id: Optional[str] = None
     crosses_zone: bool = False
     dst_zone: str = ""
+    is_critical_path: bool = False
+    crown_jewel_distance: int = -1
+    threat_level: Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"] = "MEDIUM"
+    threat_rationale: str = ""
 
 
 class FlowAtRisk(BaseModel, frozen=True):
@@ -124,6 +131,9 @@ class PrioritizedFix(BaseModel, frozen=True):
     control_name: str
     cost: int
     protects_nodes: tuple[str, ...]
+    paths_eliminated: int = 0
+    is_safe: bool = True
+    broken_flows: tuple[str, ...] = ()
 
 
 class AuditSummary(BaseModel, frozen=True):
@@ -290,6 +300,9 @@ def _check_technique_exposure(
     adj: Dict[str, List[Edge]],
     asset_map: Dict[str, Asset],
     tech_map: Dict[str, TechniqueDefinition],
+    cj_distances: Optional[Dict[str, int]] = None,
+    crown_jewels: Optional[Set[str]] = None,
+    critical_edges: Optional[Set[Tuple[str, str]]] = None,
 ) -> Tuple[List[Vulnerability], List[OutgoingEdgeInfo]]:
     """Check 1: Outgoing attack techniques from this node."""
     vulns: List[Vulnerability] = []
@@ -328,6 +341,30 @@ def _check_technique_exposure(
             related_entity_id=edge.dst,
         ))
 
+        # Critical path and Crown Jewel threat analysis
+        is_crit_edge = (asset_id, edge.dst) in critical_edges if critical_edges else False
+        cj_dist = cj_distances.get(edge.dst, -1) if cj_distances else -1
+        is_dst_cj = edge.dst in (crown_jewels or set())
+
+        if is_dst_cj:
+            threat_level: SeverityLevel = "CRITICAL"
+            rationale = f"Direct attack hop into Crown Jewel {dst_asset.name} ({edge.technique})"
+        elif cj_dist == 1:
+            threat_level = "HIGH"
+            rationale = f"High-threat pivot: {dst_asset.name} is directly 1 hop from Crown Jewel"
+        elif is_crit_edge:
+            threat_level = "HIGH"
+            rationale = f"Active attack line toward target ({dst_asset.name} via {edge.technique})"
+        elif crosses_zone:
+            threat_level = "HIGH"
+            rationale = f"Privilege escalation boundary hop from {asset.zone} to {dst_asset.zone}"
+        elif cj_dist == 2:
+            threat_level = "MEDIUM"
+            rationale = f"Stepping stone pivot (2 hops from Crown Jewel)"
+        else:
+            threat_level = "LOW"
+            rationale = f"Lateral move with no direct route to Crown Jewels"
+
         edges_info.append(OutgoingEdgeInfo(
             dst=edge.dst,
             dst_name=dst_asset.name,
@@ -335,6 +372,10 @@ def _check_technique_exposure(
             mitre_id=mitre_id,
             crosses_zone=crosses_zone,
             dst_zone=dst_asset.zone,
+            is_critical_path=is_crit_edge,
+            crown_jewel_distance=cj_dist,
+            threat_level=threat_level,
+            threat_rationale=rationale,
         ))
 
     return vulns, edges_info
@@ -593,8 +634,11 @@ def _select_recommended_fix(
     vulns: List[Vulnerability],
     control_scope_index: Dict[str, List[Control]],
     active_control_ids: Set[str],
+    twin: Optional[Twin] = None,
+    discovered_paths: Optional[Sequence[Sequence[str]]] = None,
+    adj: Optional[Dict[str, List[Edge]]] = None,
 ) -> Optional[RecommendedFix]:
-    """Find the best-value control to deploy at this node."""
+    """Find the best-value control to deploy at this node, aligned with PS #13."""
     applicable_controls = [
         c for c in control_scope_index.get(asset_id, [])
         if c.id not in active_control_ids
@@ -606,43 +650,94 @@ def _select_recommended_fix(
     best_ctrl = None
     best_score = -1.0
     best_fixed = 0
+    best_paths_elim = 0
+    best_is_safe = True
+    best_broken_flows: List[str] = []
 
     for ctrl in applicable_controls:
-        # Count how many vulns this control could address
+        # Count how many vulns this control addresses locally
         fixed = 0
         for v in vulns:
             if v.type == "missing_control" and v.related_entity_id == ctrl.id:
                 fixed += 1
             elif v.type == "technique_exposure":
-                # Check if the control blocks the technique used in this vuln
-                if v.related_entity_id:
-                    # The technique is embedded in the description, but we can
-                    # check if any blocked technique matches
-                    for blocked in ctrl.blocks:
-                        if blocked in (v.description or ""):
-                            fixed += 1
-                            break
-
-        # Always count at least 1 for a missing control
+                for blocked in ctrl.blocks:
+                    if blocked in (v.description or ""):
+                        fixed += 1
+                        break
         fixed = max(fixed, 1)
-        score = fixed / ctrl.cost
+
+        # Count how many critical attack paths are eliminated by deploying this control
+        paths_elim = 0
+        if discovered_paths and adj:
+            for p in discovered_paths:
+                severed = False
+                for i in range(len(p) - 1):
+                    src_node, dst_node = p[i], p[i + 1]
+                    for edge in adj.get(src_node, []):
+                        if edge.dst == dst_node:
+                            if (edge.dst in ctrl.scope or edge.src in ctrl.scope) and edge.technique in ctrl.blocks:
+                                severed = True
+                                break
+                    if severed:
+                        break
+                if severed:
+                    paths_elim += 1
+
+        # Evaluate CAB business flow continuity
+        broken_crit_flows: List[str] = []
+        if twin is not None:
+            try:
+                from backend.rules.evaluate import detect_broken_flows
+                broken, _ = detect_broken_flows(twin, [ctrl.id])
+                broken_crit_flows = [f.id for f in broken if f.criticality >= 4]
+            except Exception:
+                pass
+        is_safe = len(broken_crit_flows) == 0
+
+        # PS #13 Prioritization scoring:
+        # Rank by critical paths eliminated, penalizing broken business flows
+        safety_multiplier = 1.0 if is_safe else 0.15
+        path_weight = paths_elim * 50
+        score = ((path_weight + fixed * 2) / max(ctrl.cost, 1)) * safety_multiplier
+
         if score > best_score:
             best_score = score
             best_ctrl = ctrl
             best_fixed = fixed
+            best_paths_elim = paths_elim
+            best_is_safe = is_safe
+            best_broken_flows = broken_crit_flows
 
     if best_ctrl is None:
         return None
+
+    if best_paths_elim > 0 and best_is_safe:
+        desc = (
+            f"Deploy {best_ctrl.name} (${best_ctrl.cost:,}) — "
+            f"severs {best_paths_elim} attack path(s) to Crown Jewel, CAB safe"
+        )
+    elif best_paths_elim > 0 and not best_is_safe:
+        broken_str = ", ".join(best_broken_flows)
+        desc = (
+            f"Deploy {best_ctrl.name} (${best_ctrl.cost:,}) — "
+            f"severs {best_paths_elim} attack path(s), WARNING: breaks flow(s) {broken_str}"
+        )
+    else:
+        desc = (
+            f"Deploy {best_ctrl.name} (${best_ctrl.cost:,}) — "
+            f"blocks {', '.join(best_ctrl.blocks[:3])} on this node"
+        )
 
     return RecommendedFix(
         control_id=best_ctrl.id,
         control_name=best_ctrl.name,
         cost=best_ctrl.cost,
         vulnerabilities_fixed=best_fixed,
-        description=(
-            f"Deploy {best_ctrl.name} (${best_ctrl.cost:,}) — "
-            f"blocks {', '.join(best_ctrl.blocks[:3])} on this node"
-        ),
+        description=desc,
+        paths_eliminated=best_paths_elim,
+        is_safe=best_is_safe,
+        broken_flows=tuple(best_broken_flows),
     )
 
 
@@ -666,6 +761,8 @@ def _audit_node(
     crown_jewels: Set[str],
     cj_distances: Dict[str, int],
     tech_map: Dict[str, TechniqueDefinition],
+    discovered_paths: Optional[Sequence[Sequence[str]]] = None,
+    critical_edges: Optional[Set[Tuple[str, str]]] = None,
 ) -> NodeAudit:
     """Run all 6 vulnerability checks on a single node."""
     asset = asset_map.get(asset_id)
@@ -681,8 +778,10 @@ def _audit_node(
 
     all_vulns: List[Vulnerability] = []
 
-    # Check 1: Technique exposure
-    tech_vulns, outgoing = _check_technique_exposure(asset_id, adj, asset_map, tech_map)
+    # Check 1: Technique exposure with critical path and crown jewel trajectory
+    tech_vulns, outgoing = _check_technique_exposure(
+        asset_id, adj, asset_map, tech_map, cj_distances, crown_jewels, critical_edges
+    )
     all_vulns.extend(tech_vulns)
 
     # Check 2: Missing controls
@@ -717,8 +816,11 @@ def _audit_node(
     cj_dist = cj_distances.get(asset_id, -1)
     risk_score = _compute_risk_score(asset, all_vulns, list(outgoing), cj_dist, has_tier0)
 
-    # Recommended fix
-    rec_fix = _select_recommended_fix(asset_id, all_vulns, control_scope_index, active_control_ids)
+    # Recommended fix (PS #13 chokepoint and CAB safe selection)
+    rec_fix = _select_recommended_fix(
+        asset_id, all_vulns, control_scope_index, active_control_ids,
+        twin, discovered_paths, adj
+    )
 
     # Sort vulns: CRITICAL first, then HIGH, MEDIUM, LOW
     severity_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
@@ -757,7 +859,7 @@ def _build_summary(
     weakest: Optional[str] = None
     weakest_score = 0.0
     flow_ids: Set[str] = set()
-    fix_map: Dict[str, Tuple[str, int, List[str]]] = {}  # ctrl_id -> (name, cost, [nodes])
+    fix_map: Dict[str, Tuple[str, int, List[str], int, bool, tuple[str, ...]]] = {}
 
     for na in all_node_audits:
         for v in na.vulnerabilities:
@@ -781,11 +883,22 @@ def _build_summary(
         if na.recommended_fix:
             rf = na.recommended_fix
             if rf.control_id in fix_map:
-                name, cost, nodes = fix_map[rf.control_id]
+                name, cost, nodes, paths_elim, is_safe, broken_flows = fix_map[rf.control_id]
                 if na.asset_id not in nodes:
                     nodes.append(na.asset_id)
+                paths_elim = max(paths_elim, rf.paths_eliminated)
+                is_safe = is_safe and rf.is_safe
+                merged_broken = tuple(sorted(set(broken_flows) | set(rf.broken_flows)))
+                fix_map[rf.control_id] = (name, cost, nodes, paths_elim, is_safe, merged_broken)
             else:
-                fix_map[rf.control_id] = (rf.control_name, rf.cost, [na.asset_id])
+                fix_map[rf.control_id] = (
+                    rf.control_name,
+                    rf.cost,
+                    [na.asset_id],
+                    rf.paths_eliminated,
+                    rf.is_safe,
+                    rf.broken_flows,
+                )
 
     # Build prioritized fixes sorted by cost
     prioritized = sorted(fix_map.items(), key=lambda x: x[1][1])
@@ -795,8 +908,11 @@ def _build_summary(
             control_name=name,
             cost=cost,
             protects_nodes=tuple(nodes),
+            paths_eliminated=paths_elim,
+            is_safe=is_safe,
+            broken_flows=tuple(broken_flows),
         )
-        for ctrl_id, (name, cost, nodes) in prioritized
+        for ctrl_id, (name, cost, nodes, paths_elim, is_safe, broken_flows) in prioritized
     )
 
     return AuditSummary(
@@ -810,7 +926,7 @@ def _build_summary(
         flows_at_risk=tuple(sorted(flow_ids)),
         crown_jewel_reached=target_node in crown_jewels,
         prioritized_fixes=fixes,
-        total_fix_cost=sum(cost for _, (_, cost, _) in fix_map.items()),
+        total_fix_cost=sum(cost for _, (_, cost, _, _, _, _) in fix_map.items()),
     )
 
 
@@ -861,28 +977,38 @@ def crawl_audit(
     active_set = set(active_control_ids)
     tech_map = load_techniques_map()
 
-    # Default target: highest-criticality crown jewel
+    # Default target: highest-criticality crown jewel if None
     if target_node is None:
         cj_assets = [a for a in twin.assets if a.crown_jewel]
         if cj_assets:
             target_node = max(cj_assets, key=lambda a: a.criticality).id
-        else:
-            # Fallback: highest criticality asset
+        elif twin.assets:
             target_node = max(twin.assets, key=lambda a: a.criticality).id
 
+    # Default start: ingress node if None
+    if start_node is None:
+        ingress_assets = [
+            a for a in twin.assets
+            if any(k in a.zone.lower() for k in ("dmz", "public", "external", "ingress", "untrusted", "wan", "internet"))
+        ]
+        if ingress_assets:
+            start_node = ingress_assets[0].id
+        else:
+            in_degrees = {a.id: 0 for a in twin.assets}
+            for e in twin.edges:
+                if e.dst in in_degrees:
+                    in_degrees[e.dst] += 1
+            roots = [aid for aid, deg in in_degrees.items() if deg == 0]
+            if roots:
+                start_node = roots[0]
+            elif twin.assets:
+                start_node = twin.assets[0].id
+
     # Validate nodes exist
-    if start_node not in asset_map:
+    if not start_node or start_node not in asset_map or not target_node or target_node not in asset_map:
         return CrawlAuditResult(
-            start_node=start_node,
-            target_node=target_node,
-            total_paths=0,
-            paths=(),
-            summary=AuditSummary(),
-        )
-    if target_node not in asset_map:
-        return CrawlAuditResult(
-            start_node=start_node,
-            target_node=target_node,
+            start_node=start_node or "",
+            target_node=target_node or "",
             total_paths=0,
             paths=(),
             summary=AuditSummary(),
@@ -895,12 +1021,19 @@ def crawl_audit(
     # Find all paths
     all_paths = _find_all_paths(adj, start_node, target_node, max_depth, max_paths)
 
+    # Critical edges that appear on any discovered attack path
+    critical_edges: Set[Tuple[str, str]] = set()
+    for path in all_paths:
+        for idx in range(len(path) - 1):
+            critical_edges.add((path[idx], path[idx + 1]))
+
     if not all_paths:
         # No path found — audit just the start node
         single_audit = _audit_node(
             start_node, 1, None, None, twin, adj, asset_map, identity_map,
             identity_edges, flow_index, control_scope_index, active_set,
             crown_jewels, cj_distances, tech_map,
+            all_paths, critical_edges,
         )
         return CrawlAuditResult(
             start_node=start_node,
@@ -932,7 +1065,7 @@ def crawl_audit(
                 node_id, i + 1, entry_tech, entry_from, twin, adj,
                 asset_map, identity_map, identity_edges, flow_index,
                 control_scope_index, active_set, crown_jewels, cj_distances,
-                tech_map,
+                tech_map, all_paths, critical_edges,
             )
             path_audits.append(na)
             all_node_audits.append(na)

@@ -36,28 +36,36 @@ GOLDEN_SCENARIO_PATH = Path(__file__).parent.parent / "data" / "scenarios" / "go
 
 def _build_finbank_agents() -> Dict[str, Agent]:
     """
-    Canonical FinBank adversary agents used in all simulations and demos.
+    Adversary agents used in simulations, demos, and CAB evaluation.
 
     agent-external: unauthenticated attacker from the internet/DMZ zone.
     agent-insider:  malicious insider in the corporate zone with admin credentials.
-
-    These match the objective/zone values meaningful for the FinBank golden scenario.
+    adv-admin:      comprehensive adversary with admin credentials for what-if evaluation.
     """
     return {
         "agent-external": Agent(
             id="agent-external",
             name="External Threat Actor",
-            start_zones=("dmz",),
+            start_zones=("dmz", "public", "external"),
             capabilities=frozenset(),
             objective="specific_target",
             noise_budget=1.0,
-            skill=0.5,
+            skill=0.6,
         ),
         "agent-insider": Agent(
             id="agent-insider",
             name="Malicious Insider (Corp)",
-            start_zones=("corp",),
-            capabilities=frozenset(["creds:id-user-admin"]),
+            start_zones=("corp", "internal", "application"),
+            capabilities=frozenset(["creds:who", "creds:id-user-admin"]),
+            objective="specific_target",
+            noise_budget=1.0,
+            skill=0.8,
+        ),
+        "adv-admin": Agent(
+            id="adv-admin",
+            name="Privileged Threat Actor (Admin)",
+            start_zones=("dmz", "corp", "public", "internal"),
+            capabilities=frozenset(["creds:who", "creds:id-user-admin", "priv:admin"]),
             objective="specific_target",
             noise_budget=1.0,
             skill=0.8,
@@ -93,7 +101,44 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     else:
         logger.warning("Golden scenario not found at %s", GOLDEN_SCENARIO_PATH)
 
+    # Load additional bundled enterprise scenarios (Healthcare, Cloud SaaS, etc.)
+    scenarios_dir = Path(__file__).parent.parent / "data" / "scenarios"
+    if scenarios_dir.is_dir():
+        for s_path in scenarios_dir.glob("*.json"):
+            if s_path == GOLDEN_SCENARIO_PATH:
+                continue
+            try:
+                extra_dt = CyberDigitalTwin.from_file(s_path)
+                twin_registry[extra_dt.id] = extra_dt
+                logger.info("Loaded bundled scenario: id=%s (%s)", extra_dt.id, s_path.name)
+            except Exception as exc:
+                logger.warning("Could not load bundled scenario %s: %s", s_path.name, exc)
+
     agent_registry = _build_finbank_agents()
+
+    # Automatically provision threat actor agents for each registered twin
+    for dt_id, dt in list(twin_registry.items()):
+        agent_id = f"agent-{dt_id}"
+        if agent_id not in agent_registry:
+            ingress_zones = tuple({
+                a.zone for a in dt.twin.assets
+                if any(k in a.zone.lower() for k in ("dmz", "public", "external", "ingress", "untrusted", "wan", "internet"))
+            })
+            if not ingress_zones and dt.twin.assets:
+                ingress_zones = (dt.twin.assets[0].zone,)
+            caps = {"creds:who", "priv:admin"}
+            for ident in dt.twin.identities:
+                caps.add(f"creds:{ident.id}")
+            agent_registry[agent_id] = Agent(
+                id=agent_id,
+                name=f"External Threat Actor ({dt_id})",
+                start_zones=ingress_zones or ("dmz",),
+                capabilities=frozenset(caps),
+                objective="specific_target",
+                noise_budget=1.0,
+                skill=0.8,
+            )
+
     logger.info("Registered agents: %s", list(agent_registry.keys()))
 
     app.state.twin_registry = twin_registry

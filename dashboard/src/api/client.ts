@@ -7,19 +7,105 @@ import {
   CrawlAuditRequest,
   CrawlAuditResult,
   LineageOut,
+  TwinSummaryOut,
+  ImportTwinOut,
 } from '../types/api';
 
 const API_BASE = '/api';
 
 export const apiClient = {
-  async getTwin(): Promise<Twin> {
+  async getTwin(twinId?: string): Promise<Twin> {
     try {
-      const res = await fetch(`${API_BASE}/twin`);
+      const url = twinId ? `${API_BASE}/twin/${twinId}` : `${API_BASE}/twin`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       return await res.json();
     } catch (e) {
       console.warn('Falling back to local golden twin fixture:', e);
       return getFallbackTwin();
+    }
+  },
+
+  async listTwins(): Promise<TwinSummaryOut[]> {
+    try {
+      const res = await fetch(`${API_BASE}/twins`);
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      return await res.json();
+    } catch (e) {
+      console.warn('Falling back to default scenario list:', e);
+      return [
+        {
+          id: 'twin-finbank-golden',
+          hash: '182090a59db79404',
+          asset_count: 10,
+          edge_count: 16,
+          flow_count: 8,
+          control_count: 5,
+          is_golden: true,
+        },
+        {
+          id: 'twin-healthcare-hospital',
+          hash: '5ee46e1e8c12048f',
+          asset_count: 8,
+          edge_count: 10,
+          flow_count: 4,
+          control_count: 3,
+          is_golden: false,
+        },
+        {
+          id: 'twin-cloud-ecommerce',
+          hash: 'b0ca4b2219754f2a',
+          asset_count: 8,
+          edge_count: 11,
+          flow_count: 4,
+          control_count: 3,
+          is_golden: false,
+        },
+      ];
+    }
+  },
+
+  async importTwin(twinData: any): Promise<ImportTwinOut> {
+    const res = await fetch(`${API_BASE}/twin/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(twinData),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: `HTTP error ${res.status}` }));
+      throw new Error(err.detail || `Import failed with status ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  async getTemplateJson(): Promise<any> {
+    try {
+      const res = await fetch(`${API_BASE}/twin/template`);
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      return await res.json();
+    } catch (e) {
+      return {
+        id: 'twin-custom-template',
+        assets: [
+          { id: 'public-web', name: 'Public Web App', kind: 'server', zone: 'dmz', criticality: 2, crown_jewel: false },
+          { id: 'app-server', name: 'Application Server', kind: 'server', zone: 'corp', criticality: 3, crown_jewel: false },
+          { id: 'secure-db', name: 'Master Customer Database', kind: 'database', zone: 'prod', criticality: 5, crown_jewel: true }
+        ],
+        identities: [
+          { id: 'id-app-service', name: 'App Service Principal', kind: 'service_account', tier: 2 },
+          { id: 'id-dba-admin', name: 'Database Administrator', kind: 'admin', tier: 1 }
+        ],
+        edges: [
+          { src: 'public-web', dst: 'app-server', technique: 'exploit_public_app' },
+          { src: 'app-server', dst: 'secure-db', technique: 'db_login' }
+        ],
+        flows: [
+          { id: 'FLOW-MAIN', name: 'Production Data Flow', src: 'public-web', dst: 'secure-db', technique: 'db_login', criticality: 5 }
+        ],
+        controls: [
+          { id: 'ctrl-db-seg', name: 'Database Microsegmentation', cost: 2000, blocks: ['db_login'], scope: ['secure-db'], efficacy: 0.95 }
+        ]
+      };
     }
   },
 
@@ -33,7 +119,7 @@ export const apiClient = {
     try {
       const payload = {
         twin_id: params.twin_id || 'twin-finbank-golden',
-        agent_id: params.agent_id || 'agent-external',
+        agent_id: params.agent_id || 'adv-admin',
         n: params.n_walks || 100,
         seed: params.seed || 42,
         control_ids: params.control_ids || [],
@@ -45,8 +131,11 @@ export const apiClient = {
       });
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       const data = await res.json();
-      if (data.candidate_routes && Array.isArray(data.candidate_routes)) {
-        const topRoute = data.candidate_routes[0];
+      if (data.candidate_routes && Array.isArray(data.candidate_routes) && data.candidate_routes.length > 0) {
+        const ingressRoute = data.candidate_routes.find((r: any) =>
+          r.nodes && r.nodes.length > 0 && (r.nodes[0] === 'internet' || r.nodes[0].includes('internet') || r.nodes[0].includes('ingress'))
+        );
+        const topRoute = ingressRoute || data.candidate_routes[0];
         const nodes: string[] = topRoute ? topRoute.nodes : [];
         return {
           twin_id: data.twin_id,
@@ -73,6 +162,21 @@ export const apiClient = {
       return data;
     } catch (e) {
       console.warn('Falling back to local simulate mock:', e);
+      const twinId = params.twin_id || 'twin-finbank-golden';
+      if (twinId !== 'twin-finbank-golden') {
+        // The mock below is FinBank-only; its node ids don't exist on other twins' canvases.
+        return {
+          twin_id: twinId,
+          agent_id: params.agent_id || 'adv-admin',
+          p_success: 0,
+          mean_effort: 0,
+          p90_effort: null,
+          compromised_nodes: [],
+          choke_points: {},
+          exemplar_paths: [],
+          attack_trajectory: [],
+        };
+      }
       return getFallbackSimulate(params.control_ids || []);
     }
   },
@@ -308,7 +412,14 @@ function getFallbackVerdict(controlIds: string[]): ChangeVerdict {
   const hasEdr = controlIds.includes('ctrl-edr');
 
   if (hasSeg) {
-    const brokenF3 = twin.flows.find(f => f.id === 'F3')!;
+    const brokenF3 = twin.flows.find(f => f.id === 'F3') || {
+      id: 'F3',
+      name: 'Payroll Transaction Ledger Commits',
+      src: 'payroll-api',
+      dst: 'prod-db',
+      technique: 'db_login',
+      criticality: 5,
+    };
     return {
       recommendation: "BLOCK",
       verdict: "BLOCK",

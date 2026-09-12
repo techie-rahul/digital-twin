@@ -26,6 +26,7 @@ interface EdgePathData {
   technique: string;
   d: string;
   mid: { x: number; y: number };
+  nearDst?: { x: number; y: number };
   isFlow: boolean;
   flow?: ServiceFlow;
   isBlocked: boolean;
@@ -275,7 +276,11 @@ export const TopologyEdgeOverlay: React.FC<TopologyEdgeOverlayProps> = ({
       const midX = 0.125 * start.x + 0.375 * cp1.x + 0.375 * cp2.x + 0.125 * end.x;
       const midY = 0.125 * start.y + 0.375 * cp1.y + 0.375 * cp2.y + 0.125 * end.y;
 
-      return { d, start, end, mid: { x: midX, y: midY } };
+      // High-arc point at t = 0.75 along the curve (avoids card collisions on upward drift vectors)
+      const nearDstX = 0.0156 * start.x + 0.1406 * cp1.x + 0.4219 * cp2.x + 0.4219 * end.x;
+      const nearDstY = 0.0156 * start.y + 0.1406 * cp1.y + 0.4219 * cp2.y + 0.4219 * end.y;
+
+      return { d, start, end, mid: { x: midX, y: midY }, nearDst: { x: nearDstX, y: nearDstY } };
     },
     [containerRef]
   );
@@ -344,7 +349,7 @@ export const TopologyEdgeOverlay: React.FC<TopologyEdgeOverlayProps> = ({
         const { blocked, control } = checkEdgeBlocked(edge.src, edge.dst, edge.technique);
 
         const isRouteD = isRouteDEdgeCheck(edge.src, edge.dst);
-        const isDriftEdge = edge.src === 'ws-contractor' && (edge.dst === 'jump-01' || edge.dst === 'iam-auth');
+        const isDriftEdge = edge.src === 'ws-contractor' && edge.dst === 'jump-01';
         const isHumanRouteBlocked =
           isReroutingActive &&
           ((edge.src === 'ws-dev' && edge.dst === 'jump-01') ||
@@ -358,7 +363,8 @@ export const TopologyEdgeOverlay: React.FC<TopologyEdgeOverlayProps> = ({
 
         const isDimmed =
           (isBlastMode && !isInBlastRadius) ||
-          (isReroutingActive && isHumanRouteBlocked);
+          (isReroutingActive && isHumanRouteBlocked) ||
+          (isDriftActive && !isDriftEdge && !blocked);
 
         list.push({
           id: `edge-${edge.src}-${edge.dst}-${edge.technique}`,
@@ -367,6 +373,7 @@ export const TopologyEdgeOverlay: React.FC<TopologyEdgeOverlayProps> = ({
           technique: edge.technique,
           d: pathInfo.d,
           mid: pathInfo.mid,
+          nearDst: pathInfo.nearDst,
           isFlow: false,
           isBlocked: blocked || isHumanRouteBlocked,
           blockedByControl: control,
@@ -413,7 +420,7 @@ export const TopologyEdgeOverlay: React.FC<TopologyEdgeOverlayProps> = ({
           (flow.src === blastRadiusEpicenter ||
             (reachableNodeIds.has(flow.src) && reachableNodeIds.has(flow.dst)));
 
-        const isDimmed = isBlastMode && !isInBlastRadius;
+        const isDimmed = (isBlastMode && !isInBlastRadius) || (isDriftActive && !isSevered);
 
         list.push({
           id: `flow-${flow.id}`,
@@ -1079,21 +1086,29 @@ export const TopologyEdgeOverlay: React.FC<TopologyEdgeOverlayProps> = ({
         // 4. Sync Drift Badge (Contractor Admin Grant)
         // ===================================================================
         if (edge.isDriftEdge && isDriftActive) {
+          if (edge.dst !== 'jump-01') return null;
+          const pos = edge.nearDst || edge.mid;
+
           return (
             <div
               key={`badge-drift-${edge.id}`}
-              style={{ left: edge.mid.x, top: edge.mid.y }}
-              className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto z-35"
+              style={{ left: pos.x + 24, top: pos.y + 12 }}
+              className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto z-40"
               onMouseEnter={() => onHoverEdge(edge.id)}
               onMouseLeave={() => onHoverEdge(null)}
             >
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-orange text-white text-[10px] font-mono font-bold shadow-orange-glow border border-orange-400 whitespace-nowrap cursor-pointer animate-pulse"
+                className="flex flex-col items-center px-3 py-1.5 rounded-lg bg-brand-orange text-white shadow-orange-glow border border-orange-400 cursor-pointer animate-pulse select-none text-center"
               >
-                <RefreshCw className="w-3.5 h-3.5 text-white animate-spin" style={{ animationDuration: '4s' }} />
-                <span>⚠️ UNAPPROVED PRIVILEGE DRIFT: CONTRACTOR ADMIN GRANT</span>
+                <div className="flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-wider text-orange-100">
+                  <RefreshCw className="w-3 h-3 text-white animate-spin" style={{ animationDuration: '3s' }} />
+                  <span>Unapproved Privilege Drift</span>
+                </div>
+                <span className="text-[10px] font-mono font-black tracking-tight whitespace-nowrap">
+                  Contractor Admin Grant (T1078)
+                </span>
               </motion.div>
             </div>
           );

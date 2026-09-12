@@ -9,6 +9,7 @@ import { OptimizerPanel } from './components/OptimizerPanel';
 import { BlastRadiusModal } from './components/BlastRadiusModal';
 import { ChessPieceAuditorView } from './components/ChessPieceAuditorView';
 import { TwinLineageView } from './components/TwinLineageView';
+import { ImportDatasetModal } from './components/ImportDatasetModal';
 import { apiClient } from './api/client';
 import { Twin, ChangeVerdict, OptimizationResult, BlastRadiusResponse, SimulationStep, Asset, Edge, ServiceFlow } from './types/api';
 import { DemoPresetId, DecisionHeroData } from './types/presets';
@@ -25,6 +26,8 @@ export const App: React.FC = () => {
   // Digital Twin state from backend
   const [twin, setTwin] = useState<Twin | null>(null);
   const [isBackendLive, setIsBackendLive] = useState<boolean>(false);
+  const [activeTwinId, setActiveTwinId] = useState<string>('twin-finbank-golden');
+  const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
 
   // Active Demo Preset (Defaults to Preset 1: Baseline)
   const [activePresetId, setActivePresetId] = useState<DemoPresetId>('preset-baseline');
@@ -101,10 +104,33 @@ export const App: React.FC = () => {
   }, [selectedControlIds, twin]);
 
   // 3. Preset Selection Handler
+  // Presets are authored against the FinBank golden twin's control ids. On any other twin,
+  // translate the preset's intent onto that twin's own control catalogue so we never send
+  // control ids the backend doesn't know.
+  const resolvePresetControls = (presetId: DemoPresetId): string[] => {
+    const cfg = DEMO_PRESETS[presetId];
+    if (activeTwinId === 'twin-finbank-golden') return cfg.controlIds;
+    const catalogue = twin?.controls ?? [];
+    if (presetId === 'preset-baseline' || catalogue.length === 0) return [];
+    if (presetId === 'preset-full-seg') return catalogue.map((c) => c.id);
+    const identityTechs = ['ssh_lateral', 'rdp_lateral', 'iam_assume_role', 'cred_dump'];
+    if (presetId === 'preset-mfa') {
+      const mfaLike = catalogue.filter(
+        (c) => /mfa|identity|bastion|iam|zero-trust/i.test(`${c.id} ${c.name}`) ||
+          (c.blocks ?? []).some((t) => identityTechs.includes(t))
+      );
+      return (mfaLike.length ? mfaLike : catalogue.slice(0, 1)).map((c) => c.id);
+    }
+    // Scoped seg / sync drift: the single control scoped to the crown jewel, else the cheapest one.
+    const crownIds = new Set((twin?.assets ?? []).filter((a) => a.crown_jewel).map((a) => a.id));
+    const scoped = catalogue.find((c) => (c.scope ?? []).some((id) => crownIds.has(id)));
+    const cheapest = [...catalogue].sort((a, b) => (a.cost ?? 0) - (b.cost ?? 0))[0];
+    return [(scoped ?? cheapest).id];
+  };
+
   const handleSelectPreset = (presetId: DemoPresetId) => {
     setActivePresetId(presetId);
-    const cfg = DEMO_PRESETS[presetId];
-    setSelectedControlIds(cfg.controlIds);
+    setSelectedControlIds(resolvePresetControls(presetId));
     setCompromisedNodeIds([]);
     setSimulationSteps([]);
     setIsSimulating(false);
@@ -122,6 +148,22 @@ export const App: React.FC = () => {
     );
   };
 
+  // 5b. Dynamic Dataset Switcher Handler
+  const handleSelectTwin = async (twinId: string) => {
+    try {
+      const twinData = await apiClient.getTwin(twinId);
+      setTwin(twinData);
+      setActiveTwinId(twinId);
+      setSelectedControlIds([]);
+      setCompromisedNodeIds([]);
+      setSimulationSteps([]);
+      setIsSimulating(false);
+      setVerdict(null);
+    } catch (err) {
+      console.error('Failed to switch twin dataset:', err);
+    }
+  };
+
   // 6. Live Breach Simulation (Falling nodes cascade & directed vector traversal)
   const handleRunSimulation = async () => {
     if (isSimulating) return;
@@ -130,8 +172,9 @@ export const App: React.FC = () => {
     setCompromisedNodeIds([]);
     setSimulationSteps([]);
 
-    // Scenario-specific step trajectories for deterministic pitch demonstration
-    if (activePresetId === 'preset-mfa') {
+    // Scenario-specific step trajectories for deterministic pitch demonstration (FinBank only)
+    if (activeTwinId === 'twin-finbank-golden') {
+      if (activePresetId === 'preset-mfa') {
       // Demonstrates Attacker Re-Planning:
       // Human route blocked via ws-dev -> jump-01, attacker discovers and pivots to Route D (web-dmz -> ci-runner -> backup-01 -> prod-db)
       const mfaTrajectory: SimulationStep[] = [
@@ -410,18 +453,39 @@ export const App: React.FC = () => {
           setIsSimulating(false);
         }
       }, 500);
-      return;
+        return;
+      }
     }
 
     // Default / Baseline: Call FastAPI simulation endpoint
     try {
       const res = await apiClient.simulate({
-        twin_id: twin?.id || 'twin-finbank-golden',
+        twin_id: activeTwinId || twin?.id || 'twin-finbank-golden',
         agent_id: 'adv-admin',
         seed: 42,
         n_walks: 200,
         control_ids: selectedControlIds,
       });
+
+      // The backend returns the attacker's best route regardless of how much the selected
+      // controls degraded it. When success probability collapses, render the block at the first
+      // route node that sits inside a selected control's scope instead of painting the crown jewel red.
+      if (res.attack_trajectory && res.attack_trajectory.length > 0 && selectedControlIds.length > 0 && res.p_success < 0.25) {
+        const scopedNodes = new Set(
+          (twin?.controls ?? [])
+            .filter((c) => selectedControlIds.includes(c.id))
+            .flatMap((c) => c.scope ?? [])
+        );
+        const blockIdx = res.attack_trajectory.findIndex((s) => scopedNodes.has(s.asset_id));
+        if (blockIdx > 0) {
+          const pct = Math.round(res.p_success * 100);
+          res.attack_trajectory = res.attack_trajectory.slice(0, blockIdx + 1).map((s, i) =>
+            i === blockIdx
+              ? { ...s, status: 'blocked' as const, notes: `Route degraded by active control — attacker success probability ${pct}% (was baseline).` }
+              : s
+          );
+        }
+      }
 
       if (res.attack_trajectory && res.attack_trajectory.length > 0) {
         let currentStep = 0;
@@ -441,7 +505,23 @@ export const App: React.FC = () => {
           }
         }, 500);
       } else {
-        setCompromisedNodeIds(res.compromised_nodes);
+        if (res.compromised_nodes && res.compromised_nodes.length > 0) {
+          setCompromisedNodeIds(res.compromised_nodes);
+        } else if (effectiveAssets.length > 0) {
+          setSimulationSteps([
+            {
+              step_index: 1,
+              asset_id: effectiveAssets[0].id,
+              asset_name: effectiveAssets[0].name,
+              zone: effectiveAssets[0].zone,
+              technique: 'perimeter_probe',
+              status: 'blocked',
+              cost: 0,
+              noise: 0.1,
+              notes: 'SIMULATION RESULT: All lateral attack paths to Crown Jewel severed by active controls or network boundaries.',
+            },
+          ]);
+        }
         setIsSimulating(false);
       }
     } catch (e) {
@@ -524,14 +604,15 @@ export const App: React.FC = () => {
     .filter((c) => selectedControlIds.includes(c.id))
     .map((c) => c.name);
 
-  // Use Golden Assets and Golden Edges for crisp 10-12 asset topology
-  const effectiveAssets: Asset[] = GOLDEN_ASSETS;
-  const effectiveEdges: Edge[] = GOLDEN_EDGES;
-  const effectiveFlows: ServiceFlow[] = GOLDEN_FLOWS;
+  // Use Golden Assets and Golden Edges for FinBank story; dynamic assets/edges/flows for custom twins
+  const isCustomTwin = activeTwinId !== 'twin-finbank-golden';
+  const effectiveAssets: Asset[] = isCustomTwin && twin.assets?.length ? twin.assets : GOLDEN_ASSETS;
+  const effectiveEdges: Edge[] = isCustomTwin && twin.edges?.length ? twin.edges : GOLDEN_EDGES;
+  const effectiveFlows: ServiceFlow[] = isCustomTwin && twin.flows?.length ? twin.flows : GOLDEN_FLOWS;
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] bg-tech-grid text-ash-900 flex flex-col font-sans">
-      {/* Navigation Header with Top-Right Mode Toggle */}
+      {/* Navigation Header with Top-Right Mode Toggle & Dataset Switcher */}
       <Header
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -539,6 +620,8 @@ export const App: React.FC = () => {
         onTogglePresentationMode={setPresentationMode}
         isBackendLive={isBackendLive}
         onReset={handleResetScenario}
+        activeTwinId={activeTwinId}
+        onOpenImportModal={() => setIsImportModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -631,7 +714,9 @@ export const App: React.FC = () => {
         {presentationMode === 'chess-audit' && (
           <ChessPieceAuditorView
             assets={effectiveAssets}
+            edges={effectiveEdges}
             controls={twin.controls}
+            twinId={activeTwinId}
             onBackToDecisionStory={() => setPresentationMode('story')}
           />
         )}
@@ -641,6 +726,7 @@ export const App: React.FC = () => {
         {/* ================================================================= */}
         {presentationMode === 'lineage' && (
           <TwinLineageView
+            activeTwinId={activeTwinId}
             onBackToDecisionStory={() => setPresentationMode('story')}
           />
         )}
@@ -652,10 +738,28 @@ export const App: React.FC = () => {
         onClose={() => setBlastRadiusData(null)}
       />
 
+      {/* Dynamic Digital Twin Dataset Import & Testing Modal */}
+      <ImportDatasetModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        activeTwinId={activeTwinId}
+        onSelectTwin={(id) => handleSelectTwin(id)}
+        onTwinImported={(newTwin: Twin) => {
+          setTwin(newTwin);
+          setActiveTwinId(newTwin.id);
+          setSelectedControlIds([]);
+          setCompromisedNodeIds([]);
+          setSimulationSteps([]);
+          setIsSimulating(false);
+          setVerdict(null);
+        }}
+      />
+
       {/* Minimalist Footer / Audit Strip */}
       <footer className="border-t border-canvas-border bg-white px-6 py-3 text-xs font-mono text-ash-400 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-subtle">
         <div className="flex items-center gap-4">
-          <span>Active Preset: <strong className="text-ash-700">{activePreset.label}</strong></span>
+          <span>Active Dataset: <strong className="text-ash-700">{twin?.name || twin?.id || activeTwinId}</strong></span>
+          <span>Preset: <strong className="text-ash-700">{activePreset.label}</strong></span>
           <span>Snapshot Hash: <strong className="text-ash-700">sha256:7f3a9e2d...</strong></span>
           <span>Deterministic Seed: <strong className="text-brand-orange">42</strong></span>
         </div>

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import {
   Asset,
+  Edge,
   Control,
   CrawlAuditResult,
   NodeAudit,
@@ -37,11 +38,13 @@ import { GOLDEN_ASSETS, GOLDEN_EDGES, GOLDEN_FLOWS } from '../data/topologyData'
 
 interface ChessPieceAuditorViewProps {
   assets: Asset[];
+  edges?: Edge[];
   controls: Control[];
+  twinId?: string;
   onBackToDecisionStory?: () => void;
 }
 
-// Fixed canvas coordinates (percentages) for clean architectural layout
+// Fixed canvas coordinates (percentages) for default FinBank layout
 const NODE_COORDINATES: Record<string, { x: number; y: number }> = {
   // DMZ (12%)
   internet: { x: 12, y: 22 },
@@ -66,9 +69,38 @@ const NODE_COORDINATES: Record<string, { x: number; y: number }> = {
 
 export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
   assets = GOLDEN_ASSETS,
+  edges = [],
   controls,
+  twinId = 'twin-finbank-golden',
   onBackToDecisionStory,
 }) => {
+  const activeEdges = useMemo(() => (edges && edges.length > 0 ? edges : GOLDEN_EDGES), [edges]);
+
+  // Dynamic node coordinate resolution (uses fixed coords if available, else distributes by zone)
+  const getNodeCoords = useMemo(() => {
+    return (assetId: string): { x: number; y: number } => {
+      if (NODE_COORDINATES[assetId]) return NODE_COORDINATES[assetId];
+      const asset = assets.find((a) => a.id === assetId);
+      const zone = (asset?.zone || 'dmz').toLowerCase();
+      let x = 12;
+      if (zone.includes('corp') || zone.includes('lan') || zone.includes('user') || zone.includes('station')) x = 38;
+      else if (zone.includes('mgmt') || zone.includes('admin') || zone.includes('auth') || zone.includes('pacs') || zone.includes('cognito')) x = 64;
+      else if (zone.includes('prod') || zone.includes('db') || zone.includes('lake') || zone.includes('rds')) x = 88;
+
+      const zoneAssets = assets.filter((a) => {
+        const az = (a.zone || 'dmz').toLowerCase();
+        if (x === 12) return az.includes('dmz') || az.includes('public') || az.includes('pump') || az.includes('api');
+        if (x === 38) return az.includes('corp') || az.includes('lan') || az.includes('user') || az.includes('station') || az.includes('runner');
+        if (x === 64) return az.includes('mgmt') || az.includes('admin') || az.includes('auth') || az.includes('pacs') || az.includes('cognito') || az.includes('jump');
+        return az.includes('prod') || az.includes('db') || az.includes('lake') || az.includes('rds');
+      });
+      const idx = Math.max(zoneAssets.findIndex((a) => a.id === assetId), 0);
+      const total = Math.max(zoneAssets.length, 1);
+      const y = total <= 1 ? 50 : 20 + (idx / (total - 1)) * 65;
+      return { x, y: Math.round(y) };
+    };
+  }, [assets]);
+
   // Crawl configuration state
   const [startNode, setStartNode] = useState<string>('internet');
   const [targetNode, setTargetNode] = useState<string>('prod-db');
@@ -94,6 +126,7 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
     setIsPlaying(false);
     try {
       const res = await apiClient.crawlAudit({
+        twin_id: twinId,
         start_node: startNode,
         target_node: targetNode,
         max_depth: maxHops,
@@ -112,10 +145,22 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
     }
   };
 
-  // Initial load
+  // Sync start and target nodes when active twin or assets change
+  useEffect(() => {
+    if (assets && assets.length > 0) {
+      const defaultStart = assets.find((a) => (a.zone || '').toLowerCase().includes('dmz'))?.id || assets[0].id;
+      const defaultTarget = assets.find((a) => a.crown_jewel)?.id || assets[assets.length - 1].id;
+      setStartNode(defaultStart);
+      setTargetNode(defaultTarget);
+      setCurrentNodeId(defaultStart);
+      setVisitedNodes([defaultStart]);
+    }
+  }, [twinId, assets]);
+
+  // Initial and reactive load on twinId change
   useEffect(() => {
     handleRunCrawl();
-  }, []);
+  }, [twinId]);
 
   const activePath = auditResult?.paths[selectedPathIndex] || null;
 
@@ -153,10 +198,44 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
     return found || activePath.node_audits[activeHopIndex] || null;
   }, [activePath, currentNodeId, activeHopIndex]);
 
-  // Outgoing moves from current node (all outgoing edges from topology)
+  // Outgoing moves from current node (enriched with PS #13 critical threat path metadata)
   const outgoingBranchMoves = useMemo(() => {
-    return GOLDEN_EDGES.filter((e) => e.src === currentNodeId);
-  }, [currentNodeId]);
+    const apiEdges = activeHop?.outgoing_edges || [];
+    const topologyEdges = activeEdges.filter((e) => e.src === currentNodeId);
+
+    const enriched = topologyEdges.map((te) => {
+      const matched = apiEdges.find((ae) => ae.dst === te.dst && ae.technique === te.technique);
+      return {
+        ...te,
+        is_critical_path: matched?.is_critical_path ?? false,
+        crown_jewel_distance: matched?.crown_jewel_distance ?? -1,
+        threat_level: matched?.threat_level ?? ('MEDIUM' as SeverityLevel),
+        threat_rationale: matched?.threat_rationale ?? '',
+        mitre_id: matched?.mitre_id,
+        dst_zone: matched?.dst_zone,
+      };
+    });
+
+    const threatRank: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+    return enriched.sort((a, b) => {
+      // 1. Critical path trajectory first
+      if (a.is_critical_path !== b.is_critical_path) {
+        return a.is_critical_path ? -1 : 1;
+      }
+      // 2. Proximity to Crown Jewel (1 hop before 2 hops)
+      if (a.crown_jewel_distance > 0 && b.crown_jewel_distance > 0) {
+        if (a.crown_jewel_distance !== b.crown_jewel_distance) {
+          return a.crown_jewel_distance - b.crown_jewel_distance;
+        }
+      } else if (a.crown_jewel_distance > 0) {
+        return -1;
+      } else if (b.crown_jewel_distance > 0) {
+        return 1;
+      }
+      // 3. Threat level
+      return (threatRank[a.threat_level] ?? 2) - (threatRank[b.threat_level] ?? 2);
+    });
+  }, [currentNodeId, activeHop]);
 
   // Filtered vulnerabilities for active node
   const filteredVulnerabilities = useMemo(() => {
@@ -240,11 +319,11 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
                 Chess Piece Security Auditor
               </h2>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-light text-brand-orange border border-brand-border">
-                Multi-Branch Move Engine
+                PS #13 Threat Vector Engine
               </span>
             </div>
             <p className="text-[11px] text-ash-400">
-              Evaluates outgoing candidate moves at each hop like a chess engine analysis board
+              Evaluates candidate attack trajectories toward Crown Jewels & recommends CAB-safe chokepoints
             </p>
           </div>
         </div>
@@ -445,9 +524,9 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
               </defs>
 
               {/* Baseline Background Edges */}
-              {GOLDEN_EDGES.map((edge, idx) => {
-                const srcCoords = NODE_COORDINATES[edge.src];
-                const dstCoords = NODE_COORDINATES[edge.dst];
+              {activeEdges.map((edge, idx) => {
+                const srcCoords = getNodeCoords(edge.src);
+                const dstCoords = getNodeCoords(edge.dst);
                 if (!srcCoords || !dstCoords) return null;
 
                 const isCurrentOutgoing = edge.src === currentNodeId;
@@ -479,8 +558,8 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
 
               {/* Dynamic Branching Moves Layer (Outgoing from Current Position) */}
               {outgoingBranchMoves.map((edge, idx) => {
-                const srcCoords = NODE_COORDINATES[edge.src];
-                const dstCoords = NODE_COORDINATES[edge.dst];
+                const srcCoords = getNodeCoords(edge.src);
+                const dstCoords = getNodeCoords(edge.dst);
                 if (!srcCoords || !dstCoords) return null;
 
                 const isPrimary = idx === 0; // Primary candidate move
@@ -520,8 +599,7 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
 
             {/* Interactive Nodes Layer */}
             {assets.map((asset) => {
-              const coords = NODE_COORDINATES[asset.id];
-              if (!coords) return null;
+              const coords = getNodeCoords(asset.id);
 
               const isCurrent = asset.id === currentNodeId;
               const isVisited = visitedNodes.includes(asset.id);
@@ -691,7 +769,7 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
             </div>
           </div>
 
-          {/* Candidate Legal Moves (The Branching Tree of Possibilities) */}
+          {/* Candidate Legal Moves (PS #13 Threat Trajectory Ranking) */}
           <div className="bg-white border-2 border-purple-200 rounded-xl p-4 shadow-subtle space-y-3 bg-gradient-to-br from-purple-50/40 to-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-bold text-purple-900 font-mono">
@@ -699,7 +777,7 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
                 <span>Candidate Moves from This Hop ({outgoingBranchMoves.length})</span>
               </div>
               <span className="text-[10px] font-mono text-purple-600 font-semibold">
-                Chess Engine Tree
+                PS #13 Threat Ranking
               </span>
             </div>
 
@@ -708,7 +786,7 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
                 ★ Target or Choke Point reached — no further outgoing moves.
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {outgoingBranchMoves.map((edge, idx) => {
                   const dstAsset = assets.find((a) => a.id === edge.dst);
                   const isCrossZone = activeHop?.zone !== dstAsset?.zone;
@@ -716,35 +794,74 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
                   return (
                     <div
                       key={idx}
-                      className="p-2.5 rounded-lg border border-purple-200/80 bg-white hover:border-purple-400 hover:shadow-subtle transition-all flex items-center justify-between gap-2"
+                      className={`p-3 rounded-lg border transition-all space-y-1.5 ${
+                        edge.is_critical_path
+                          ? 'border-red-300 bg-red-50/50 hover:border-red-400 shadow-subtle'
+                          : 'border-purple-200/80 bg-white hover:border-purple-300'
+                      }`}
                     >
-                      <div className="truncate">
-                        <div className="flex items-center gap-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="truncate flex items-center gap-1.5 flex-wrap">
                           <span className="text-xs font-mono font-bold text-ash-900">
                             ♟️ Move #{idx + 1}: → {edge.dst}
                           </span>
-                          {dstAsset?.crown_jewel && (
-                            <Flame className="w-3 h-3 text-brand-orange animate-pulse" />
+                          {edge.is_critical_path && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-red-100 text-red-700 border border-red-200 animate-pulse">
+                              ★ CRITICAL THREAT LINE
+                            </span>
                           )}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[10px] text-ash-500 font-mono mt-0.5">
-                          <span className="px-1.5 py-0.2 rounded bg-ash-100 text-ash-700">
-                            {edge.technique}
-                          </span>
-                          {isCrossZone && (
-                            <span className="text-amber-700 font-semibold">
-                              [Crosses Zone Boundary]
+                          {dstAsset?.crown_jewel && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-0.5">
+                              <Flame className="w-2.5 h-2.5 text-brand-orange" />
+                              <span>CROWN JEWEL</span>
                             </span>
                           )}
                         </div>
+
+                        <button
+                          onClick={() => handleSelectBranchMove(edge.dst)}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold shadow-subtle transition-all cursor-pointer whitespace-nowrap active:scale-95 ${
+                            edge.is_critical_path
+                              ? 'bg-red-600 hover:bg-red-700 text-white'
+                              : 'bg-purple-600 hover:bg-purple-700 text-white'
+                          }`}
+                        >
+                          Play Move ⑂
+                        </button>
                       </div>
 
-                      <button
-                        onClick={() => handleSelectBranchMove(edge.dst)}
-                        className="px-2.5 py-1 rounded-md bg-purple-600 hover:bg-purple-700 text-white text-[11px] font-mono font-bold shadow-subtle transition-all cursor-pointer whitespace-nowrap active:scale-95"
-                      >
-                        Play Move ⑂
-                      </button>
+                      {/* Threat Metadata */}
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
+                        <span className="px-1.5 py-0.2 rounded bg-ash-100 text-ash-700 font-semibold">
+                          {edge.technique}
+                        </span>
+                        {edge.crown_jewel_distance !== undefined && edge.crown_jewel_distance >= 0 && (
+                          <span
+                            className={`px-1.5 py-0.2 rounded font-semibold ${
+                              edge.crown_jewel_distance === 0
+                                ? 'bg-red-100 text-red-800 border border-red-200'
+                                : edge.crown_jewel_distance === 1
+                                ? 'bg-orange-100 text-orange-800 border border-orange-200'
+                                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            }`}
+                          >
+                            {edge.crown_jewel_distance === 0
+                              ? 'Direct Crown Jewel Target'
+                              : `${edge.crown_jewel_distance} hop from Crown Jewel`}
+                          </span>
+                        )}
+                        {isCrossZone && (
+                          <span className="text-amber-700 font-semibold">
+                            [Zone Boundary Crossing]
+                          </span>
+                        )}
+                      </div>
+
+                      {edge.threat_rationale && (
+                        <p className="text-[11px] text-ash-600 leading-snug font-sans pt-0.5">
+                          {edge.threat_rationale}
+                        </p>
+                      )}
                     </div>
                   );
                 })}
@@ -752,12 +869,12 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
             )}
           </div>
 
-          {/* Cheapest Recommended Fix (High ROI Spotlight) */}
-          <div className="bg-white border-2 border-brand-orange/40 rounded-xl p-4 shadow-subtle space-y-2 bg-gradient-to-br from-brand-light/40 to-white">
+          {/* PS #13 Chokepoint Interception Remediation */}
+          <div className="bg-white border-2 border-brand-orange/40 rounded-xl p-4 shadow-subtle space-y-3 bg-gradient-to-br from-brand-light/40 to-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-bold text-brand-orange font-mono">
-                <Sparkles className="w-4 h-4" />
-                <span>Cheapest Recommended Fix</span>
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>Chokepoint Interception (PS #13 Defense)</span>
               </div>
               {activeHop?.recommended_fix && (
                 <span className="text-xs font-bold font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
@@ -767,15 +884,45 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
             </div>
 
             {activeHop?.recommended_fix ? (
-              <div className="space-y-1.5">
-                <div className="text-xs font-bold font-mono text-ash-900">
-                  {activeHop.recommended_fix.control_name}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-1">
+                  <div className="text-xs font-bold font-mono text-ash-900">
+                    {activeHop.recommended_fix.control_name}
+                  </div>
+                  {activeHop.recommended_fix.paths_eliminated !== undefined &&
+                    activeHop.recommended_fix.paths_eliminated > 0 && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        ⚡ Severs {activeHop.recommended_fix.paths_eliminated} Critical Path(s)
+                      </span>
+                    )}
                 </div>
+
                 <p className="text-[11px] text-ash-600 leading-relaxed">
                   {activeHop.recommended_fix.description}
                 </p>
-                <div className="text-[10px] font-mono text-brand-orange font-semibold pt-1">
-                  Neutralizes {activeHop.recommended_fix.vulnerabilities_fixed} attack technique(s) at this hop
+
+                {/* CAB Business Flow Continuity Status */}
+                <div className="pt-1">
+                  {activeHop.recommended_fix.is_safe === false ? (
+                    <div className="p-2 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 space-y-1">
+                      <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-amber-800">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                        <span>CAB Warning: Business Flow Disruption</span>
+                      </div>
+                      <p className="text-[10px] leading-tight text-amber-800">
+                        Disrupts critical business flow(s):{' '}
+                        <strong className="font-mono">
+                          {activeHop.recommended_fix.broken_flows?.join(', ') || 'None'}
+                        </strong>{' '}
+                        (Criticality ≥ 4). Deploying locally without CAB exception risks platform outage.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-mono font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>CAB Approved: 100% Operational Continuity (Zero business flows broken)</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -895,6 +1042,68 @@ export const ChessPieceAuditorView: React.FC<ChessPieceAuditorViewProps> = ({
               ${auditResult.summary.total_fix_cost.toLocaleString()}
             </span>
           </div>
+
+          {/* Prioritized Chokepoint Portfolio Table */}
+          {auditResult.summary.prioritized_fixes.length > 0 && (
+            <div className="bg-white border border-canvas-border rounded-xl p-4 shadow-subtle space-y-3">
+              <div className="flex items-center justify-between border-b border-ash-100 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-brand-orange" />
+                  <span className="text-xs font-bold font-mono text-ash-900 uppercase">
+                    Prioritized Chokepoint Remediation Portfolio (PS #13 Cut-Set)
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-ash-500">
+                  Ranked by Attack Path Elimination & CAB Continuity
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                {auditResult.summary.prioritized_fixes.map((fix) => (
+                  <div
+                    key={fix.control_id}
+                    className="p-3 rounded-lg border border-ash-200 bg-ash-50/40 hover:bg-white transition-all space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-mono font-bold text-ash-900 truncate">
+                        {fix.control_name}
+                      </span>
+                      <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">
+                        ${fix.cost.toLocaleString()}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-ash-500">
+                      <span>Protects:</span>
+                      <span className="font-semibold text-ash-800">
+                        {fix.protects_nodes.join(', ')}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-1 pt-1 text-[10px] font-mono">
+                      {fix.paths_eliminated !== undefined && fix.paths_eliminated > 0 ? (
+                        <span className="px-1.5 py-0.5 rounded font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          ⚡ Severs {fix.paths_eliminated} path(s)
+                        </span>
+                      ) : (
+                        <span className="text-ash-400">0 critical paths</span>
+                      )}
+
+                      {fix.is_safe === false ? (
+                        <span className="px-1.5 py-0.5 rounded font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                          ⚠ CAB Breakage ({fix.broken_flows?.join(', ') || 'Flows'})
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 rounded font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          ✓ CAB Safe
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

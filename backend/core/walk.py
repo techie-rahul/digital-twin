@@ -285,6 +285,7 @@ def simulate(
     target: Optional[str] = None,
     *,
     inventory: Optional[Inventory] = None,
+    start_nodes: Optional[Sequence[str]] = None,
 ) -> Result:
     """Execute plan-then-execute adversary simulation over pre-computed attack inventory.
 
@@ -346,14 +347,17 @@ def simulate(
             elif any(a.id == "prod-db" for a in twin.assets):
                 resolved_target = "prod-db"
             else:
-                resolved_target = None
+                sorted_assets = sorted(twin.assets, key=lambda a: a.criticality, reverse=True)
+                resolved_target = sorted_assets[0].id if sorted_assets else None
 
         if inventory is not None:
             resolved_inventory = inventory
         else:
             compiled = compile_twin(twin)
             # Run state-space search ONCE
-            resolved_inventory = search(compiled, agent, target=resolved_target, assets=twin)
+            resolved_inventory = search(
+                compiled, agent, target=resolved_target, assets=twin, start_nodes=start_nodes
+            )
 
     # 2. Route Policy: filter by noise, rank top-5, compute selection weights
     candidate_routes = evaluate_routes(resolved_inventory, agent, k=5)

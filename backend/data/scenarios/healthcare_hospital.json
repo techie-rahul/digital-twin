@@ -1,0 +1,226 @@
+{
+  "id": "twin-healthcare-hospital",
+  "assets": [
+    {
+      "id": "internet",
+      "name": "External Ingress / Public Internet",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 1,
+      "crown_jewel": false
+    },
+    {
+      "id": "patient-portal",
+      "name": "Patient Health Portal (DMZ)",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "nurse-station-01",
+      "name": "ICU Nurse Clinical Workstation",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "doctor-tablet",
+      "name": "Attending Physician Mobile Tablet",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 2,
+      "crown_jewel": false
+    },
+    {
+      "id": "radiology-pacs",
+      "name": "PACS Medical Imaging Server",
+      "kind": "server",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "iot-infusion-gw",
+      "name": "Smart Infusion Pump IoT Gateway",
+      "kind": "server",
+      "zone": "corp",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "hospital-ad",
+      "name": "Hospital Active Directory & IAM",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "ehr-core-db",
+      "name": "Epic Systems Core EHR Database",
+      "kind": "database",
+      "zone": "prod",
+      "criticality": 5,
+      "crown_jewel": true
+    }
+  ],
+  "identities": [
+    {
+      "id": "id-nurse",
+      "name": "Clinical Care Nurse Account",
+      "kind": "user",
+      "tier": 2
+    },
+    {
+      "id": "id-radiologist",
+      "name": "Radiology Specialist Account",
+      "kind": "user",
+      "tier": 2
+    },
+    {
+      "id": "id-health-admin",
+      "name": "Hospital Domain Administrator",
+      "kind": "admin",
+      "tier": 1
+    },
+    {
+      "id": "id-ehr-service",
+      "name": "HL7 Interoperability Service Principal",
+      "kind": "service_account",
+      "tier": 1
+    }
+  ],
+  "edges": [
+    {
+      "src": "internet",
+      "dst": "patient-portal",
+      "technique": "exploit_public_app"
+    },
+    {
+      "src": "patient-portal",
+      "dst": "iot-infusion-gw",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "patient-portal",
+      "dst": "radiology-pacs",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "nurse-station-01",
+      "dst": "hospital-ad",
+      "technique": "rdp_lateral"
+    },
+    {
+      "src": "nurse-station-01",
+      "dst": "radiology-pacs",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "doctor-tablet",
+      "dst": "hospital-ad",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "radiology-pacs",
+      "dst": "ehr-core-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "iot-infusion-gw",
+      "dst": "ehr-core-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "hospital-ad",
+      "dst": "ehr-core-db",
+      "technique": "rdp_lateral"
+    },
+    {
+      "src": "hospital-ad",
+      "dst": "radiology-pacs",
+      "technique": "ssh_lateral"
+    }
+  ],
+  "flows": [
+    {
+      "id": "HL7-1",
+      "name": "Inpatient Clinical Orders Telemetry",
+      "src": "nurse-station-01",
+      "dst": "ehr-core-db",
+      "technique": "db_login",
+      "criticality": 5
+    },
+    {
+      "id": "DICOM-2",
+      "name": "PACS Diagnostic Imaging Ingestion",
+      "src": "radiology-pacs",
+      "dst": "ehr-core-db",
+      "technique": "db_login",
+      "criticality": 4
+    },
+    {
+      "id": "WEB-3",
+      "name": "Public Patient Portal Appointments",
+      "src": "internet",
+      "dst": "patient-portal",
+      "technique": "exploit_public_app",
+      "criticality": 3
+    },
+    {
+      "id": "IOT-4",
+      "name": "ICU Infusion Pump Vital Sync",
+      "src": "iot-infusion-gw",
+      "dst": "ehr-core-db",
+      "technique": "db_login",
+      "criticality": 5
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-med-seg",
+      "name": "Medical Device Subnet Microsegmentation",
+      "cost": 3200,
+      "blocks": [
+        "db_login",
+        "ssh_lateral",
+        "smb_lateral"
+      ],
+      "scope": [
+        "ehr-core-db",
+        "iot-infusion-gw"
+      ],
+      "efficacy": 0.95
+    },
+    {
+      "id": "ctrl-clinician-mfa",
+      "name": "Clinical Biometric & FIDO2 Challenge",
+      "cost": 1800,
+      "blocks": [
+        "rdp_lateral",
+        "ssh_lateral"
+      ],
+      "scope": [
+        "hospital-ad",
+        "nurse-station-01"
+      ],
+      "efficacy": 0.9
+    },
+    {
+      "id": "ctrl-pacs-edr",
+      "name": "Radiology Host Endpoint Protection",
+      "cost": 1400,
+      "blocks": [
+        "smb_lateral",
+        "exploit_public_app"
+      ],
+      "scope": [
+        "radiology-pacs",
+        "patient-portal"
+      ],
+      "efficacy": 0.88
+    }
+  ]
+}

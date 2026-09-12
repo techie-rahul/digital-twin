@@ -260,3 +260,68 @@ class TestMultiplePaths:
         """ws-dev → prod-db should have multiple paths (via ci-runner→jump-01 and direct rdp)."""
         result = crawl_audit(golden_twin, "ws-dev", "prod-db")
         assert result.total_paths >= 2  # at least 2 routes
+
+
+# =====================================================================
+# 9. PS #13 Path Prioritization & CAB Business Flow Safety
+# =====================================================================
+
+
+class TestPS13PathPrioritizationAndSafety:
+    def test_candidate_move_critical_path_tagging(self, golden_twin: Twin):
+        """web-dmz outgoing moves to payroll-api and jump-01 must be flagged as critical path."""
+        result = crawl_audit(golden_twin, "internet", "prod-db")
+        web_dmz_audit = next(
+            na for na in result.paths[0].node_audits if na.asset_id == "web-dmz"
+        )
+        crit_moves = [e for e in web_dmz_audit.outgoing_edges if e.is_critical_path]
+        assert len(crit_moves) >= 1
+        dst_ids = {e.dst for e in crit_moves}
+        assert "payroll-api" in dst_ids or "jump-01" in dst_ids
+
+    def test_candidate_move_crown_jewel_proximity(self, golden_twin: Twin):
+        """Candidate moves from web-dmz should report proximity to prod-db."""
+        result = crawl_audit(golden_twin, "internet", "prod-db")
+        web_dmz_audit = next(
+            na for na in result.paths[0].node_audits if na.asset_id == "web-dmz"
+        )
+        for edge in web_dmz_audit.outgoing_edges:
+            if edge.dst in ("payroll-api", "jump-01"):
+                assert edge.crown_jewel_distance == 1
+                assert edge.threat_level in ("HIGH", "CRITICAL")
+                assert len(edge.threat_rationale) > 0
+
+    def test_chokepoint_paths_eliminated_and_safety_on_recommended_fix(self, golden_twin: Twin):
+        """Fixes on payroll-api and prod-db must record paths eliminated and CAB flow safety."""
+        result = crawl_audit(golden_twin, "internet", "prod-db")
+        for path in result.paths:
+            for na in path.node_audits:
+                if na.recommended_fix:
+                    fix = na.recommended_fix
+                    assert hasattr(fix, "paths_eliminated")
+                    assert hasattr(fix, "is_safe")
+                    assert hasattr(fix, "broken_flows")
+                    # payroll-api or prod-db recommend controls that eliminate paths
+                    if na.asset_id in ("payroll-api", "prod-db"):
+                        assert fix.paths_eliminated >= 1
+
+    def test_flow_breakage_accurately_detected_on_remediation(self, golden_twin: Twin):
+        """ctrl-mfa on payroll-api breaks flow F2 (crit 4) and must be flagged as is_safe=False."""
+        result = crawl_audit(golden_twin, "internet", "prod-db")
+        payroll_audit = next(
+            (na for p in result.paths for na in p.node_audits if na.asset_id == "payroll-api"),
+            None,
+        )
+        if payroll_audit and payroll_audit.recommended_fix:
+            if payroll_audit.recommended_fix.control_id == "ctrl-mfa":
+                assert payroll_audit.recommended_fix.is_safe is False
+                assert "F2" in payroll_audit.recommended_fix.broken_flows
+
+    def test_prioritized_fixes_include_path_and_safety_metadata(self, golden_twin: Twin):
+        """Summary prioritized fixes must expose paths_eliminated and is_safe."""
+        result = crawl_audit(golden_twin, "internet", "prod-db")
+        for fix in result.summary.prioritized_fixes:
+            assert isinstance(fix.paths_eliminated, int)
+            assert isinstance(fix.is_safe, bool)
+            assert isinstance(fix.broken_flows, tuple)
+

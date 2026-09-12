@@ -43,6 +43,7 @@ export interface Control {
 
 export interface Twin {
   id: string;
+  name?: string;
   assets: Asset[];
   identities: Identity[];
   edges: Edge[];
@@ -179,6 +180,9 @@ export interface RecommendedFix {
   cost: number;
   vulnerabilities_fixed: number;
   description: string;
+  paths_eliminated?: number;
+  is_safe?: boolean;
+  broken_flows?: string[];
 }
 
 export interface OutgoingEdgeInfo {
@@ -188,6 +192,10 @@ export interface OutgoingEdgeInfo {
   mitre_id?: string | null;
   crosses_zone: boolean;
   dst_zone: string;
+  is_critical_path?: boolean;
+  crown_jewel_distance?: number;
+  threat_level?: SeverityLevel;
+  threat_rationale?: string;
 }
 
 export interface FlowAtRisk {
@@ -219,6 +227,9 @@ export interface PrioritizedFix {
   control_name: string;
   cost: number;
   protects_nodes: string[];
+  paths_eliminated?: number;
+  is_safe?: boolean;
+  broken_flows?: string[];
 }
 
 export interface AuditSummary {
@@ -272,4 +283,32 @@ export interface LineageOut {
   twin_id: string;
   lineage: LineageNodeOut[];
 }
+
+// =====================================================================
+// Dataset Management & Dynamic Ingestion Types
+// =====================================================================
+
+export interface TwinSummaryOut {
+  id: string;
+  parent_id?: string | null;
+  hash: string;
+  asset_count: number;
+  edge_count: number;
+  flow_count: number;
+  control_count: number;
+  is_golden: boolean;
+}
+
+export interface ImportTwinOut {
+  status: string;
+  twin_id: string;
+  hash: string;
+  asset_count: number;
+  identity_count: number;
+  edge_count: number;
+  flow_count: number;
+  control_count: number;
+  assets: Asset[];
+}
+
 

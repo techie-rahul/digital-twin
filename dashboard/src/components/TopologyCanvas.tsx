@@ -182,20 +182,33 @@ export const TopologyCanvas: React.FC<TopologyCanvasProps> = ({
     if (onClearBlastRadius) onClearBlastRadius();
   };
 
-  // Segment assets into architectural zones
-  const dmzAssets = assets.filter((a) => a.zone === 'dmz');
-  const corpAssets = assets.filter((a) => a.zone === 'corp');
-  const mgmtAssets = assets.filter((a) => a.zone === 'mgmt');
-  const prodAssets = assets.filter((a) => a.zone === 'prod');
+  // Segment assets into architectural zones with forgiving mapping
+  const getNormalizedZone = (zone: string) => {
+    const z = (zone || '').toLowerCase();
+    if (z.includes('dmz') || z.includes('public') || z.includes('external') || z.includes('edge') || z.includes('pump') || z.includes('cdn')) return 'dmz';
+    if (z.includes('corp') || z.includes('lan') || z.includes('user') || z.includes('workstation') || z.includes('dev') || z.includes('station') || z.includes('runner')) return 'corp';
+    if (z.includes('mgmt') || z.includes('admin') || z.includes('iam') || z.includes('auth') || z.includes('bastion') || z.includes('pacs') || z.includes('jump')) return 'mgmt';
+    return 'prod';
+  };
+
+  const dmzAssets = assets.filter((a) => getNormalizedZone(a.zone) === 'dmz');
+  const corpAssets = assets.filter((a) => getNormalizedZone(a.zone) === 'corp');
+  const mgmtAssets = assets.filter((a) => getNormalizedZone(a.zone) === 'mgmt');
+  const prodAssets = assets.filter((a) => getNormalizedZone(a.zone) === 'prod');
 
   const getNodeState = (assetId: string): NodeVisualState => {
     if (compromisedNodeIds.includes(assetId)) {
       return 'compromised';
     }
-    // Protected node verification
+    // Protected node verification: active controls protect scoped node or crown jewel
+    const assetObj = assets.find((a) => a.id === assetId);
+    const isTargetOrCrown = assetObj?.crown_jewel || assetId === 'prod-db' || assetId === 'backup-01';
+    const isProtectedByControl = controls.some(
+      (c) => selectedControlIds.includes(c.id) && c.scope.includes(assetId)
+    );
     if (
-      activeControlNames.length > 0 &&
-      (assetId === 'prod-db' || assetId === 'backup-01') &&
+      (activeControlNames.length > 0 || selectedControlIds.length > 0) &&
+      (isProtectedByControl || isTargetOrCrown) &&
       !compromisedNodeIds.includes(assetId)
     ) {
       return 'protected';
@@ -363,7 +376,7 @@ export const TopologyCanvas: React.FC<TopologyCanvasProps> = ({
                   ? 'bg-red-600 animate-pulse'
                   : latestStep?.is_pivot
                   ? 'bg-amber-500 animate-pulse'
-                  : latestStep?.asset_id === 'prod-db'
+                  : assets.find((a) => a.id === latestStep?.asset_id)?.crown_jewel || latestStep?.asset_id === 'prod-db'
                   ? 'bg-brand-orange animate-bounce'
                   : 'bg-brand-orange'
               }`}

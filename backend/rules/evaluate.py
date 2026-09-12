@@ -1029,7 +1029,8 @@ def evaluate_change(
             twin_after = clone(twin, add_controls=applied_controls_tuple)
 
     # 4. Run Complete Path Search (Algorithm A) for Before and After
-    compiled_before = compile_twin(twin_before, catalog=catalog)
+    # Baseline deploys none of the catalogue controls; "after" deploys only the proposed ones.
+    compiled_before = compile_twin(twin_before, catalog=catalog, control_impacts=[])
     compiled_after = compile_twin(twin_after, catalog=catalog, control_impacts=applied_impacts)
 
     inv_before: Inventory = search(

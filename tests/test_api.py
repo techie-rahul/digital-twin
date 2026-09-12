@@ -479,3 +479,84 @@ def test_crawl_audit_alias_audit(client):
     assert body["target_node"] == "prod-db"
     assert "summary" in body
 
+
+# ─────────────────────────────────────────────
+# 13. Dynamic Dataset Import & Multi-Scenario Testing
+# ─────────────────────────────────────────────
+
+def test_list_twins_includes_bundled_scenarios(client):
+    r = client.get("/twins")
+    assert r.status_code == 200
+    twins = r.json()
+    twin_ids = {t["id"] for t in twins}
+    assert GOLDEN_ID in twin_ids
+    assert "twin-healthcare-hospital" in twin_ids
+    assert "twin-cloud-ecommerce" in twin_ids
+
+
+def test_get_twin_template(client):
+    r = client.get("/twin/template")
+    assert r.status_code == 200
+    data = r.json()
+    assert "id" in data
+    assert "assets" in data
+    assert "edges" in data
+    assert "flows" in data
+    assert "controls" in data
+
+
+def test_import_custom_twin_success(client):
+    custom_twin_data = {
+        "id": "twin-test-university",
+        "assets": [
+            {"id": "campus-wifi", "name": "Campus Wi-Fi Ingress", "kind": "server", "zone": "dmz", "criticality": 1, "crown_jewel": False},
+            {"id": "lab-pc", "name": "Research Lab PC", "kind": "workstation", "zone": "corp", "criticality": 2, "crown_jewel": False},
+            {"id": "grades-db", "name": "Student Grades Database", "kind": "database", "zone": "prod", "criticality": 5, "crown_jewel": True},
+        ],
+        "identities": [
+            {"id": "id-student", "name": "Student Account", "kind": "user", "tier": 2},
+            {"id": "id-registrar", "name": "Registrar Admin", "kind": "admin", "tier": 1},
+        ],
+        "edges": [
+            {"src": "campus-wifi", "dst": "lab-pc", "technique": "exploit_public_app"},
+            {"src": "lab-pc", "dst": "grades-db", "technique": "db_login"},
+        ],
+        "flows": [
+            {"id": "FLOW-ACADEMIC", "name": "Grade Submission Flow", "src": "lab-pc", "dst": "grades-db", "technique": "db_login", "criticality": 5},
+        ],
+        "controls": [
+            {"id": "ctrl-student-firewall", "name": "Database Isolation Firewall", "cost": 1200, "blocks": ["db_login"], "scope": ["grades-db"], "efficacy": 0.9},
+        ],
+    }
+
+    r = client.post("/twin/import", json=custom_twin_data)
+    assert r.status_code == 201
+    res = r.json()
+    assert res["status"] == "ok"
+    assert res["twin_id"] == "twin-test-university"
+    assert res["asset_count"] == 3
+    assert res["edge_count"] == 2
+
+    # Verify newly imported twin is queryable via GET /twin/{id}
+    fetch_r = client.get("/twin/twin-test-university")
+    assert fetch_r.status_code == 200
+    assert fetch_r.json()["id"] == "twin-test-university"
+
+    # Verify crawl-audit works immediately on this newly imported twin
+    audit_r = client.post("/crawl-audit", json={
+        "twin_id": "twin-test-university",
+        "start_node": "campus-wifi",
+        "target_node": "grades-db",
+    })
+    assert audit_r.status_code == 200
+    audit_data = audit_r.json()
+    assert audit_data["total_paths"] >= 1
+    assert audit_data["start_node"] == "campus-wifi"
+
+
+def test_import_custom_twin_invalid_schema(client):
+    # Missing assets / malformed structure
+    r = client.post("/twin/import", json={"id": "bad-twin", "foo": "bar"})
+    assert r.status_code in (400, 422)
+
+

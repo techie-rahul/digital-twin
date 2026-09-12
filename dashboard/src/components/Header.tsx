@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, RotateCcw, SlidersHorizontal, Layers, ShieldCheck } from 'lucide-react';
+import { Shield, RotateCcw, SlidersHorizontal, Layers, ShieldCheck, Database } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'topology' | 'console' | 'optimizer';
@@ -8,6 +8,8 @@ interface HeaderProps {
   onTogglePresentationMode: (mode: 'story' | 'evidence' | 'chess-audit' | 'lineage') => void;
   isBackendLive: boolean;
   onReset: () => void;
+  activeTwinId?: string;
+  onOpenImportModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,6 +19,8 @@ export const Header: React.FC<HeaderProps> = ({
   onTogglePresentationMode,
   isBackendLive,
   onReset,
+  activeTwinId = 'twin-finbank-golden',
+  onOpenImportModal,
 }) => {
   return (
     <header className="border-b border-canvas-border bg-white sticky top-0 z-50 px-6 py-3 transition-all">
@@ -136,7 +140,22 @@ export const Header: React.FC<HeaderProps> = ({
         )}
 
         {/* Engine Status & Reset Trigger */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          {/* Dataset Switcher / Import Modal Trigger */}
+          <button
+            onClick={onOpenImportModal}
+            title="Switch enterprise scenario or upload custom digital twin JSON"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-bold rounded-lg bg-ash-100 hover:bg-white text-ash-800 hover:text-brand-orange border border-ash-200 shadow-subtle transition-all cursor-pointer active:scale-[0.98]"
+          >
+            <Database className="w-3.5 h-3.5 text-brand-orange" />
+            <span className="truncate max-w-[130px] hidden sm:inline">
+              {activeTwinId ? activeTwinId.replace('twin-', '') : 'Datasets'}
+            </span>
+            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-brand-orange-light text-brand-orange border border-brand-orange-border">
+              Import
+            </span>
+          </button>
+
           <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-ash-100 border border-ash-200 text-xs font-mono">
             <span className="relative flex h-2 w-2">
               <span

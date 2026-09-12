@@ -24,6 +24,7 @@ class SimulateRequest(BaseModel):
     n: int = Field(100, ge=1, le=2000, description="Number of Monte Carlo trials.")
     seed: int = Field(42, description="Deterministic RNG seed.")
     target: Optional[str] = Field(None, description="Target asset ID. Defaults to crown jewel.")
+    control_ids: List[str] = Field(default_factory=list, description="Optional controls to apply.")
 
 
 class CloneRequest(BaseModel):
@@ -198,3 +199,29 @@ class HealthOut(BaseModel):
     golden_twin_id: Optional[str]
     golden_hash: Optional[str]
     cache_size: int
+
+
+class TwinSummaryOut(BaseModel):
+    """GET /twins — item summary."""
+    id: str
+    parent_id: Optional[str] = None
+    hash: str
+    asset_count: int
+    edge_count: int
+    flow_count: int
+    control_count: int
+    is_golden: bool = False
+
+
+class ImportTwinOut(BaseModel):
+    """POST /twin/import response."""
+    status: str = "ok"
+    twin_id: str
+    hash: str
+    asset_count: int
+    identity_count: int
+    edge_count: int
+    flow_count: int
+    control_count: int
+    assets: List[AssetOut]
+

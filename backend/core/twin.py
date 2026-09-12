@@ -197,25 +197,230 @@ class CyberDigitalTwin:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "CyberDigitalTwin":
         """Instantiate from a dictionary matching Twin or legacy format."""
-        if "assets" in data and ("flows" in data or "controls" in data):
-            if "flows" not in data:
-                data["flows"] = []
-            if "identities" not in data:
-                data["identities"] = []
-            if "edges" not in data and "relationships" in data:
-                data["edges"] = [
-                    {
-                        "src": r.get("source", r.get("src")),
-                        "dst": r.get("target", r.get("dst")),
-                        "technique": r.get("technique", r.get("relation_type", "ACCESSES")),
-                    }
-                    for r in data["relationships"]
-                ]
-            if "id" not in data and "scenario_id" in data:
-                data["id"] = data["scenario_id"]
-            twin = Twin.model_validate(data)
-            return cls(twin)
-        raise ValueError("Invalid digital twin data format")
+        if not isinstance(data, dict):
+            raise ValueError("Digital twin data must be a dictionary")
+
+        # Make a shallow copy of data dictionary
+        d = dict(data)
+
+        # 1. Normalize ID
+        if "id" not in d and "scenario_id" in d:
+            d["id"] = str(d["scenario_id"])
+        d.setdefault("id", "twin-custom")
+
+        if "assets" not in d or not isinstance(d["assets"], list):
+            raise ValueError("Invalid digital twin data: missing 'assets' list")
+
+        # 2. Normalize Assets
+        crit_map = {"critical": 5, "high": 4, "medium": 3, "low": 2, "info": 1}
+        kind_map = {
+            "web_server": "server", "api_gateway": "server", "microservice": "server",
+            "auth_service": "server", "siem_server": "server", "server": "server",
+            "database": "database", "db": "database",
+            "workstation": "workstation", "laptop": "workstation", "jumpbox": "workstation",
+            "cloud_role": "cloud_role", "iam": "cloud_role",
+            "share": "share", "backup_vault": "share", "storage": "share",
+        }
+        allowed_kinds = {"server", "workstation", "database", "cloud_role", "share"}
+
+        normalized_assets = []
+        for a_raw in d["assets"]:
+            if not isinstance(a_raw, dict) or "id" not in a_raw:
+                continue
+            a = dict(a_raw)
+            # Normalize Kind
+            raw_kind = a.get("kind") or a.get("type") or "server"
+            if raw_kind not in allowed_kinds:
+                raw_kind = kind_map.get(str(raw_kind).lower(), "server")
+            a["kind"] = raw_kind
+
+            # Normalize Criticality
+            crit = a.get("criticality", 3)
+            if isinstance(crit, str):
+                crit = crit_map.get(crit.lower(), 3)
+            elif not isinstance(crit, int):
+                try:
+                    crit = int(crit)
+                except Exception:
+                    crit = 3
+            a["criticality"] = max(1, min(5, crit))
+
+            # Normalize Crown Jewel
+            if "crown_jewel" not in a:
+                a["crown_jewel"] = (a["criticality"] >= 5)
+            else:
+                a["crown_jewel"] = bool(a["crown_jewel"])
+
+            # Normalize Name and Zone
+            a.setdefault("name", str(a["id"]))
+            a.setdefault("zone", "corp")
+            normalized_assets.append(a)
+
+        d["assets"] = normalized_assets
+        asset_id_set = {a["id"] for a in normalized_assets}
+
+        # 3. Normalize Edges
+        valid_techniques = {
+            "phish", "exploit_public_app", "cred_dump", "priv_esc_local",
+            "creds_in_files", "rdp_lateral", "ssh_lateral", "smb_lateral",
+            "db_login", "exfil_c2",
+        }
+        tech_alias_map = {
+            "web": "exploit_public_app", "http": "exploit_public_app", "https": "exploit_public_app",
+            "api": "exploit_public_app", "ingress": "exploit_public_app", "portal": "exploit_public_app",
+            "sql": "db_login", "database": "db_login", "postgres": "db_login", "mysql": "db_login",
+            "rdp": "rdp_lateral", "smb": "smb_lateral", "share": "smb_lateral", "storage": "smb_lateral",
+            "vault": "smb_lateral", "ssh": "ssh_lateral", "lateral": "ssh_lateral", "admin": "ssh_lateral",
+            "phish": "phish", "spearphish": "phish", "email": "phish", "exfil": "exfil_c2",
+        }
+
+        if "edges" not in d and "relationships" in d:
+            d["edges"] = [
+                {
+                    "src": r.get("source", r.get("src")),
+                    "dst": r.get("target", r.get("dst")),
+                    "technique": r.get("technique", r.get("relation_type", r.get("type", "ACCESSES"))),
+                }
+                for r in d["relationships"]
+                if isinstance(r, dict)
+            ]
+        d.setdefault("edges", [])
+
+        normalized_edges = []
+        for e_raw in d["edges"]:
+            if not isinstance(e_raw, dict):
+                continue
+            src = e_raw.get("src") or e_raw.get("source")
+            dst = e_raw.get("dst") or e_raw.get("target")
+            raw_tech = str(e_raw.get("technique") or e_raw.get("relation_type") or e_raw.get("type") or "ACCESSES").strip()
+            if not src or not dst:
+                continue
+
+            # Ensure technique is valid against the MITRE catalog
+            if raw_tech.lower() in valid_techniques:
+                clean_tech = raw_tech.lower()
+            else:
+                matched_tech = None
+                raw_lower = raw_tech.lower()
+                for key, val in tech_alias_map.items():
+                    if key in raw_lower:
+                        matched_tech = val
+                        break
+                if not matched_tech:
+                    dst_lower = str(dst).lower()
+                    src_lower = str(src).lower()
+                    if any(k in dst_lower for k in ("db", "database", "ledger", "sql", "rds")):
+                        matched_tech = "db_login"
+                    elif any(k in dst_lower for k in ("share", "storage", "vault", "s3", "bucket", "lake")):
+                        matched_tech = "smb_lateral"
+                    elif any(k in dst_lower for k in ("rdp", "jump", "bastion", "workstation")):
+                        matched_tech = "rdp_lateral"
+                    elif any(k in src_lower for k in ("web", "portal", "internet", "ingress")):
+                        matched_tech = "exploit_public_app"
+                    elif "user" in src_lower:
+                        matched_tech = "phish"
+                    else:
+                        matched_tech = "ssh_lateral"
+                clean_tech = matched_tech
+
+            normalized_edges.append({"src": str(src), "dst": str(dst), "technique": clean_tech})
+        d["edges"] = normalized_edges
+
+        # 4. Normalize Identities
+        d.setdefault("identities", [])
+        allowed_identity_kinds = {"user", "admin", "service_account", "cloud_role"}
+        normalized_identities = []
+        for i_raw in d["identities"]:
+            if not isinstance(i_raw, dict) or "id" not in i_raw:
+                continue
+            i = dict(i_raw)
+            i.setdefault("name", str(i["id"]))
+            raw_ikind = i.get("kind") or i.get("type")
+            if not raw_ikind or raw_ikind not in allowed_identity_kinds:
+                role_str = str(i.get("role", "")).lower()
+                id_str = str(i["id"]).lower()
+                if "admin" in role_str or "admin" in id_str or "root" in role_str:
+                    raw_ikind = "admin"
+                elif "svc" in id_str or "service" in role_str:
+                    raw_ikind = "service_account"
+                elif "role" in id_str or "role" in role_str:
+                    raw_ikind = "cloud_role"
+                else:
+                    raw_ikind = "user"
+            i["kind"] = raw_ikind
+
+            tier = i.get("tier")
+            if not isinstance(tier, int):
+                tier = 0 if raw_ikind in ("admin", "cloud_role") else (2 if raw_ikind == "service_account" else 3)
+            i["tier"] = max(0, min(4, tier))
+            normalized_identities.append(i)
+        d["identities"] = normalized_identities
+
+        # 5. Normalize Service Flows
+        d.setdefault("flows", [])
+        normalized_flows = []
+        for idx, f_raw in enumerate(d["flows"]):
+            if not isinstance(f_raw, dict):
+                continue
+            f = dict(f_raw)
+            f.setdefault("id", f"FLOW-{idx + 1}")
+            f.setdefault("name", f["id"])
+            if "src" not in f or "dst" not in f:
+                continue
+            f.setdefault("technique", "ACCESSES")
+            fcrit = f.get("criticality", 3)
+            if isinstance(fcrit, str):
+                fcrit = crit_map.get(fcrit.lower(), 3)
+            elif not isinstance(fcrit, int):
+                fcrit = 3
+            f["criticality"] = max(1, min(5, fcrit))
+            normalized_flows.append(f)
+        d["flows"] = normalized_flows
+
+        # 6. Normalize Controls
+        d.setdefault("controls", [])
+        normalized_controls = []
+        for idx, c_raw in enumerate(d["controls"]):
+            if not isinstance(c_raw, dict) or "id" not in c_raw:
+                continue
+            c = dict(c_raw)
+            c.setdefault("name", str(c["id"]))
+            cost = c.get("cost", 2000)
+            if not isinstance(cost, int):
+                try:
+                    cost = int(cost)
+                except Exception:
+                    cost = 2000
+            c["cost"] = cost
+
+            # Blocks techniques
+            blocks = c.get("blocks")
+            if not blocks or not isinstance(blocks, (list, tuple)):
+                blocks = ["ACCESSES", "exploit_public_app", "ssh_lateral", "rdp_lateral", "db_login"]
+            c["blocks"] = [str(b) for b in blocks]
+
+            # Scope
+            scope = c.get("scope")
+            if not scope or not isinstance(scope, (list, tuple)):
+                scope = list(asset_id_set)
+            else:
+                scope = [str(s) for s in scope if str(s) in asset_id_set] or list(asset_id_set)
+            c["scope"] = scope
+
+            # Efficacy
+            efficacy = c.get("efficacy", 0.9)
+            if not isinstance(efficacy, (int, float)):
+                try:
+                    efficacy = float(efficacy)
+                except Exception:
+                    efficacy = 0.9
+            c["efficacy"] = float(efficacy)
+
+            normalized_controls.append(c)
+        d["controls"] = normalized_controls
+
+        twin = Twin.model_validate(d)
+        return cls(twin)
 
     def _build_graph(self) -> None:
         """Construct the NetworkX graph from Twin entities, flows, and edges."""
@@ -267,6 +472,8 @@ class CyberDigitalTwin:
         new_id: Optional[str] = None,
         add_controls: Iterable[Control] = (),
         remove_controls: Iterable[Union[str, Control]] = (),
+        control_ids_to_add: Iterable[str] = (),
+        control_ids_to_remove: Iterable[str] = (),
         add_edges: Iterable[Edge] = (),
         remove_edges: Iterable[Union[Edge, Tuple[str, str], Tuple[str, str, str]]] = (),
         add_assets: Iterable[Asset] = (),
@@ -275,11 +482,22 @@ class CyberDigitalTwin:
         remove_flows: Iterable[Union[str, ServiceFlow]] = (),
     ) -> "CyberDigitalTwin":
         """Produce an independent cloned CyberDigitalTwin with parent_id lineage."""
+        effective_add_controls = list(add_controls)
+        if control_ids_to_add:
+            ctrl_map = {c.id: c for c in self._twin.controls}
+            for cid in control_ids_to_add:
+                if cid in ctrl_map and ctrl_map[cid] not in effective_add_controls:
+                    effective_add_controls.append(ctrl_map[cid])
+
+        effective_remove_controls = list(remove_controls)
+        if control_ids_to_remove:
+            effective_remove_controls.extend(control_ids_to_remove)
+
         cloned_twin = clone(
             self._twin,
             new_id=new_id,
-            add_controls=add_controls,
-            remove_controls=remove_controls,
+            add_controls=effective_add_controls,
+            remove_controls=effective_remove_controls,
             add_edges=add_edges,
             remove_edges=remove_edges,
             add_assets=add_assets,

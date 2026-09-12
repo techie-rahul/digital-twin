@@ -153,7 +153,6 @@ export const GOLDEN_EDGES: Edge[] = [
 
   // Sync Drift: Contractor Admin Grant (Preset 5)
   { src: 'ws-contractor', dst: 'jump-01', technique: 'cloud_admin_grant' },
-  { src: 'ws-contractor', dst: 'iam-auth', technique: 'cloud_admin_grant' },
 
   // Management Bastion to Production & Backup
   { src: 'jump-01', dst: 'prod-db', technique: 'rdp_lateral' },

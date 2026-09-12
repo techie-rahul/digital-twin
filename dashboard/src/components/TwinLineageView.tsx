@@ -18,16 +18,24 @@ import { LineageOut, LineageNodeOut } from '../types/api';
 import { apiClient } from '../api/client';
 
 interface TwinLineageViewProps {
+  activeTwinId?: string;
   onBackToDecisionStory?: () => void;
 }
 
 export const TwinLineageView: React.FC<TwinLineageViewProps> = ({
+  activeTwinId = 'twin-finbank-golden',
   onBackToDecisionStory,
 }) => {
-  const [twinId, setTwinId] = useState<string>('twin-finbank-golden');
+  const [twinId, setTwinId] = useState<string>(activeTwinId);
   const [lineageData, setLineageData] = useState<LineageOut | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeTwinId) {
+      setTwinId(activeTwinId);
+    }
+  }, [activeTwinId]);
 
   const fetchLineage = async () => {
     setIsLoading(true);

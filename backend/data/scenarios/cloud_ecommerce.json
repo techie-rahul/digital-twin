@@ -1,0 +1,229 @@
+{
+  "id": "twin-cloud-ecommerce",
+  "assets": [
+    {
+      "id": "internet",
+      "name": "Public Web & Mobile App Traffic",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 1,
+      "crown_jewel": false
+    },
+    {
+      "id": "aws-api-gw",
+      "name": "AWS API Gateway & Envoy Proxy",
+      "kind": "server",
+      "zone": "dmz",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "auth-cognito",
+      "name": "AWS Cognito User Pools & IAM",
+      "kind": "cloud_role",
+      "zone": "dmz",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "ecs-checkout-service",
+      "name": "ECS Fargate Checkout Microservice",
+      "kind": "server",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "github-runner-ci",
+      "name": "GitHub Actions Self-Hosted Runner",
+      "kind": "workstation",
+      "zone": "corp",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "s3-data-lake",
+      "name": "S3 Financial Data Lake Bucket",
+      "kind": "share",
+      "zone": "corp",
+      "criticality": 4,
+      "crown_jewel": false
+    },
+    {
+      "id": "cloudwatch-soc",
+      "name": "CloudWatch & GuardDuty SIEM",
+      "kind": "server",
+      "zone": "mgmt",
+      "criticality": 3,
+      "crown_jewel": false
+    },
+    {
+      "id": "rds-customer-db",
+      "name": "Amazon Aurora Multi-Region Postgres",
+      "kind": "database",
+      "zone": "prod",
+      "criticality": 5,
+      "crown_jewel": true
+    }
+  ],
+  "identities": [
+    {
+      "id": "id-developer",
+      "name": "DevOps Engineer Identity",
+      "kind": "user",
+      "tier": 2
+    },
+    {
+      "id": "id-cloud-architect",
+      "name": "Lead Cloud Infrastructure Architect",
+      "kind": "admin",
+      "tier": 1
+    },
+    {
+      "id": "id-ecs-task-role",
+      "name": "ECS Task Execution Cloud Role",
+      "kind": "cloud_role",
+      "tier": 1
+    },
+    {
+      "id": "id-checkout-service",
+      "name": "Payment Processing Microservice Principal",
+      "kind": "service_account",
+      "tier": 1
+    }
+  ],
+  "edges": [
+    {
+      "src": "internet",
+      "dst": "aws-api-gw",
+      "technique": "exploit_public_app"
+    },
+    {
+      "src": "aws-api-gw",
+      "dst": "ecs-checkout-service",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "aws-api-gw",
+      "dst": "auth-cognito",
+      "technique": "cred_dump"
+    },
+    {
+      "src": "auth-cognito",
+      "dst": "ecs-checkout-service",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "github-runner-ci",
+      "dst": "s3-data-lake",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "github-runner-ci",
+      "dst": "ecs-checkout-service",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "ecs-checkout-service",
+      "dst": "rds-customer-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "ecs-checkout-service",
+      "dst": "s3-data-lake",
+      "technique": "smb_lateral"
+    },
+    {
+      "src": "s3-data-lake",
+      "dst": "rds-customer-db",
+      "technique": "db_login"
+    },
+    {
+      "src": "cloudwatch-soc",
+      "dst": "aws-api-gw",
+      "technique": "ssh_lateral"
+    },
+    {
+      "src": "auth-cognito",
+      "dst": "rds-customer-db",
+      "technique": "db_login"
+    }
+  ],
+  "flows": [
+    {
+      "id": "API-1",
+      "name": "Public Checkout Ingress Flow",
+      "src": "internet",
+      "dst": "aws-api-gw",
+      "technique": "exploit_public_app",
+      "criticality": 4
+    },
+    {
+      "id": "PAY-2",
+      "name": "Customer Payment & Order Settlement",
+      "src": "aws-api-gw",
+      "dst": "ecs-checkout-service",
+      "technique": "ssh_lateral",
+      "criticality": 5
+    },
+    {
+      "id": "DB-3",
+      "name": "Checkout Transaction Ledger Write",
+      "src": "ecs-checkout-service",
+      "dst": "rds-customer-db",
+      "technique": "db_login",
+      "criticality": 5
+    },
+    {
+      "id": "SYNC-4",
+      "name": "Analytical Data Lake Export",
+      "src": "rds-customer-db",
+      "dst": "s3-data-lake",
+      "technique": "smb_lateral",
+      "criticality": 3
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-iam-boundary",
+      "name": "IAM Least Privilege Permission Boundary",
+      "cost": 1500,
+      "blocks": [
+        "cred_dump",
+        "ssh_lateral"
+      ],
+      "scope": [
+        "auth-cognito",
+        "ecs-checkout-service"
+      ],
+      "efficacy": 0.92
+    },
+    {
+      "id": "ctrl-rds-privatelink",
+      "name": "AWS PrivateLink VPC Microsegmentation",
+      "cost": 2800,
+      "blocks": [
+        "db_login",
+        "smb_lateral"
+      ],
+      "scope": [
+        "rds-customer-db",
+        "s3-data-lake"
+      ],
+      "efficacy": 0.95
+    },
+    {
+      "id": "ctrl-waf-edge",
+      "name": "AWS Cloud WAF Bot & Exploit Filter",
+      "cost": 2000,
+      "blocks": [
+        "exploit_public_app"
+      ],
+      "scope": [
+        "aws-api-gw",
+        "auth-cognito"
+      ],
+      "efficacy": 0.88
+    }
+  ]
+}
